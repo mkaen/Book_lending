@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Home{% endblock %}
+{% block content %}
+<div class="container content">
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            {% for message in messages %}
+                <p class="flash">{{ message }}</p>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <h2>All the Books</h2>
+    <div class="border-bottom mt-3"></div>
+    {% for book in all_books %}
+    <div class="card text-center">
+      <img src="{{ book.image_url }}" class="card-img-top" alt="{{book.title}}" style=" background-size:
+       cover; background-position: center">
+      <div class="card-body">
+        <h5 class="card-title">{{book.title}}</h5>
+          {% if not user.id == book.owner_id and not book.reserved and user.is_authenticated %}
+            <a href="{{ url_for('reserve_book', book_id=book.id) }}" class="btn btn-outline-primary align-items-center">Reserve</a>
+          {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+    {% if not available_books %}
+    <h6>Unfortunately there's no books added yet</h6>
+    {% endif %}
+</div>
+{% endblock %}

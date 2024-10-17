@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}My Books{% endblock %}
+{% block content %}
+<div class="container content">
+
+
+    <h2>My Books</h2>
+        <div class="my-3 text-center">
+    <span>Current lending duration in days: {{ user.duration }}</span>
+</div>
+
+    <form action="{{ url_for('change_duration', user_id=user.id) }}" method="POST">
+    <div class="d-flex justify-content-center">
+        <div class="input-group" style="width: 180px;">
+            <select class="form-select" id="inputGroupSelect04" name="duration" aria-label="Example select with button addon">
+                <option selected>Duration</option>
+                {% for i in range(1, 101) %}
+                <option value="{{ i }}">{{ i }} day{% if i != 1 %}s{% endif %}</option>
+                {% endfor %}
+            </select>
+            <button class="btn btn-outline-primary" type="submit">Set</button>
+        </div>
+    </div>
+</form>
+<div class="border-bottom mt-3"></div>
+        {% with messages = get_flashed_messages() %}
+                {% if messages %}
+                    {% for message in messages %}
+                        <p class="flash">{{ message }}</p>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+    {% if books %}
+    <ol class="list-group list-group-numbered justify-content-center container mt-5 card" style="width: 50%">
+
+  {% for book in books %}
+  <li class="list-group-item d-flex align-items-center" style="background-color: #ACBCFF">
+    <div class="ms-2 me-auto">
+      <div class="fw-bold"><img src="{{book.image_url}}" style="width: 20px;"> {{ book.title }}{% if due_books and book in due_books %}<span style="color: red"> Past Due</span>{% endif %}</div>
+    </div>
+
+  </li>
+        {% if book.reserved %}
+        <div>
+        {% if book.lent_out == False %}
+          <a class="badge text-bg-primary rounded-pill mt-3" href="{{ url_for('receive_book', book_id=book.id, current_page='my_books') }}">Mark as Handed Over to Lender</a>
+            <div>
+              <a class="badge text-bg-danger rounded-pill mt-3" href="{{ url_for('cancel_reservation', book_id=book.id, current_page='my_books') }}">Cancel Reservation</a>
+            </div>
+            {% else %}
+          <a class="badge text-bg-success rounded-pill mt-3" href="{{ url_for('return_book', book_id=book.id, current_page='my_books') }}">Mark as Returned</a>
+        {% endif %}
+        </div>
+
+        {% endif %}
+        {% if not book.lent_out %}
+      <div class="form-check form-switch my-3 border-bottom">
+    <input class="form-check-input mb-3" type="checkbox" role="switch" id="flexSwitchCheckDefault"
+           {% if book.available_for_lending %}checked{% endif %}
+           onclick="toggleLending('{{ book.id }}')">
+    <label class="form-check-label" for="flexSwitchCheckDefault">Activate for Lending</label>
+  </div>
+        {% else %}
+        <div class="border-bottom my-3"></div>
+        {% endif %}
+  {% endfor %}
+</ol>
+    {% endif %}
+</div>
+
+<script>
+function toggleLending(bookId) {
+  fetch(`/activate_to_borrow/${bookId}`)
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        alert(data.message);  // Kuvatakse edukuse teade
+      } else {
+        alert(data.error);  // Kuvatakse viga
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+    });
+}
+</script>
+{% endblock %}

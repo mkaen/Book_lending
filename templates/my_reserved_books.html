@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}My Reserved Books{% endblock %}
+{% block content %}
+<div class="container content">
+
+    <h2>Reserved Books</h2>
+        <div class="border-bottom mt-3"></div>
+
+    <ol class="list-group list-group-numbered justify-content-center container mt-5" style="width: 80%">
+        {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            {% for message in messages %}
+                <p class="flash">{{ message }}</p>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+  {% for book in my_books %}
+  <li class="list-group-item d-flex align-items-center" style="background-color: #ACBCFF">
+    <div class="ms-2 me-auto">
+      <div class="fw-bold">
+          <img src="{{book.image_url}}" style="width: 20px;"> {{ book.title }}  {% if due_books and book in due_books %}<span style="color: red"> Past Due</span>{% endif %}
+      </div>
+    </div>
+    {% if book.lent_out == False %}
+        <a class="badge text-bg-primary rounded-pill" href="{{ url_for('receive_book', book_id=book.id, current_page='my_reserved_books') }}">Mark as Received</a>
+        <a class="badge text-bg-danger rounded-pill mx-2" href="{{ url_for('cancel_reservation', book_id=book.id, current_page='my_reserved_books') }}">Cancel Reservation</a>
+    {% else %}
+      <a class="badge text-bg-danger rounded-pill mx-2" href="{{ url_for('return_book', book_id=book.id, current_page='my_reserved_books') }}">Return Book</a>
+      {% endif %}
+  </li>
+  {% endfor %}
+</ol>
+</div>
+{% endblock %}

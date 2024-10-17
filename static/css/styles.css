@@ -1,0 +1,60 @@
+header {
+    background-color: #B799FF;
+}
+body {
+    background-color: #E6FFFD;
+}
+.flash {
+    color: red;
+    text-align: center;
+    margin-top: 20px
+}
+.login-form {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    width: 300px;
+    min-width: 40%;
+    max-width: 85%;
+    border: #ACBCFF solid 4px;
+    border-radius: 10px;      /* Valikuline: ümardab nurgad */
+    box-shadow: 0 4px 8px rgba(0.4, 0.4, 0.4, 0.4);
+    padding: 20px;
+    margin: 20px auto auto;
+}
+
+.login-form .btn {
+    background-color: #ACBCFF
+}
+
+.container {
+    justify-items: center;
+}
+
+h2 {
+    text-align: center;
+    margin: 100px auto auto;
+}
+
+h6 {
+    text-align: center;
+    margin-top: 30px;
+    color: red;
+}
+
+.btn-outline-light {
+    color: black;
+    border-color: black;
+}
+
+.card {
+    background-color: #B799FF;
+    width: 20rem;
+    margin: 30px auto 30px auto;
+    padding: 10px;
+    border: #ACBCFF solid 4px;
+    border-radius: 10px;      /* Valikuline: ümardab nurgad */
+    box-shadow: 0 4px 8px rgba(0.4, 0.4, 0.4, 0.9);
+}
+

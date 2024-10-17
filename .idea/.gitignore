@@ -1,0 +1,6 @@
+book_lending.db
+venv
+.venv
+.env
+env/
+.idea/

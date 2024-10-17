@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Search Results{% endblock %}
+{% block content %}
+<div class="container content">
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            {% for message in messages %}
+                <p class="flash">{{ message }}</p>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <h2>Search result: {{query}}</h2>
+        <div class="border-bottom mt-3"></div>
+
+    {% for book in query_books %}
+    <div class="card text-center" style="width: 20rem; margin: 20px auto 20px auto">
+      <img src="{{ book.image_url }}" class="card-img-top" alt="{{book.title}}" style=" background-size:
+       cover; background-position: center">
+      <div class="card-body">
+        <h5 class="card-title">{{book.title}}</h5>
+        {% if not book.reserved %}
+            <a href="{{ url_for('reserve_book', book_id=book.id) }}" class="btn btn-outline-primary align-items-center">Reserve</a>
+          {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
