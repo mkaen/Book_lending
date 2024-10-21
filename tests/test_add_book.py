@@ -11,7 +11,6 @@ class TestCase(unittest.TestCase):
 
     def setUp(self):
         """Set up environment to run before every test."""
-        # Kasutame testirežiimi ja loome rakenduse ja testiklienti
         app.config['TESTING'] = True
         app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
         self.app = app.test_client()
@@ -26,7 +25,7 @@ class TestCase(unittest.TestCase):
                            password=generate_password_hash("password123", method='pbkdf2:sha256', salt_length=8),
                            duration=28)
         db.session.add(self.user_1)
-        db.session.commit()
+
         self.user_2 = User(first_name="Priit",
                            last_name="Pätt",
                            username="priitp",

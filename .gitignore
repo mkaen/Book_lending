@@ -4,4 +4,4 @@ venv
 .env
 env/
 .idea/
-.db
+istance/
