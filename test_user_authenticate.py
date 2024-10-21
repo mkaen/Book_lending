@@ -4,7 +4,7 @@ import pytest
 from flask_login import current_user
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from main import app, db, User
+from main import app, db, User, Book
 
 
 # class Test(TestCase):
@@ -114,27 +114,3 @@ def test_logout_user(client):
 def test_logout_user_not_in_session(client):
     response = client.get('/logout', follow_redirects=True)
     assert response.status_code == 401
-
-
-class BookLendTestCase(TestCase):
-
-    def setUp(self):
-        with app.app_context():
-            db.create_all()
-            db.session.add(User(first_name="Juhan",
-                                last_name="Viik",
-                                username="juhanv",
-                                email="juhan@gmail.com",
-                                password="123456",
-                                duration=28))
-            db.session.add(User(first_name="Priit",
-                                last_name="Pätt",
-                                username="priitp",
-                                email="pr@gmail.com",
-                                password="123456",
-                                duration=28))
-            db.session.commit()
-
-    def tearDown(self):
-        db.session.remove()
-        db.drop_all()
