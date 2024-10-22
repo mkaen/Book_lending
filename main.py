@@ -375,19 +375,18 @@ def login():
             logger.debug("Inserted wrong password")
             return render_template('login.html', form=form, user=current_user)
         flash(f"Logged in successfully as {user.first_name}.")
-        login_user(user)
+        login_user(user, remember=form.remember_me.data)
         logger.info("User logged in.")
         return redirect(url_for('home'))
     return render_template("login.html", form=form, user=current_user)
 
 
 @app.route('/logout')
-@login_required
 def logout():
     """Logout current user and redirect to home page."""
-    # if not current_user.is_authenticated:
-    #     flash('You must be logged in to log out')
-    #     return redirect(url_for('login'))
+    if not current_user.is_authenticated:
+        flash('You must be logged in to log out')
+        return redirect(url_for('login'))
     logout_user()
     logger.info("User logged out.")
     flash("You have been logged out. Hopefully we'll see you soon.")

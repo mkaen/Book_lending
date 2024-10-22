@@ -40,6 +40,7 @@ def test_register_new_user(client):
     assert user.username == 'juhanv'
     assert user.duration == 28
     assert check_password_hash(user.password, '123456')
+    assert user.password != '123456'
 
 
 password_hash = generate_password_hash('123456', method='pbkdf2:sha256', salt_length=8)
