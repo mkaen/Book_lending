@@ -32,6 +32,7 @@ def test_register_new_user(client):
     }, follow_redirects=True)
     assert response.status_code == 200
     assert b"Your account has been created successfully." in response.data
+    assert response.request.path == '/'
     user = db.session.execute(db.select(User).where(User.username == 'juhanv')).scalar()
     assert user is not None
     assert user.first_name == 'Juhan'
@@ -69,6 +70,7 @@ def test_login_user(client):
         assert '_user_id' in session
     assert response.status_code == 200
     assert b"Logged in successfully as Juhan." in response.data
+    assert response.request.path == '/'
 
 
 def test_invalid_username_login(client):
@@ -82,6 +84,7 @@ def test_invalid_username_login(client):
     }, follow_redirects=True)
     assert response.status_code == 200
     assert b"Invalid Username. Please try again" in response.data
+    assert response.request.path == '/login'
 
 
 def test_invalid_password_login(client):
@@ -95,6 +98,7 @@ def test_invalid_password_login(client):
     }, follow_redirects=True)
     assert response.status_code == 200
     assert b"Invalid password. Please try again"
+    assert response.request.path == '/login'
 
 
 def test_logout_user(client):
@@ -106,9 +110,11 @@ def test_logout_user(client):
         'username': 'juhanv',
         'password': '123456'
     }, follow_redirects=True)
+    # assert b"Logged in successfully as Juhan." in login_response.data
     assert login_response.status_code == 200
     assert new_user.is_active is True
-    client.get('/logout', follow_redirects=True)
+    logout_response = client.get('/logout', follow_redirects=True)
+    # assert b"You have been logged out. Hopefully we'll see you soon." in logout_response.data
     assert current_user.is_authenticated is False
 
 

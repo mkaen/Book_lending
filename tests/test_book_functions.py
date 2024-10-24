@@ -78,6 +78,7 @@ def login(client, username: str):
         'username': username,
         'password': '123456'
     }, follow_redirects=True)
+    assert response.request.path == '/'
     # print(f"\nLogin status code: {response.status_code}")
     # print(f"Is logged in: {current_user.is_authenticated}")
     with client.session_transaction() as session:
@@ -95,12 +96,17 @@ def test_add_book(client, first_user_with_books):
         'image_url': 'https://m.media-amazon.com/images/I/71+SWQ6xj1L._SY466_.jpg'
     }, follow_redirects=True)
     assert response.status_code == 200
+    assert response.request.path == "/"
     result = db.session.execute(db.select(Book).where(Book.title == "Rich Dad'S Cashflow Quadrant: Rich Dad'S Guide To "
                                                                   "Financial Freedom")).first()
     book = result[0] if result else None
     assert book is not None
+    #  VALIDATE FLASH MESSAGE
     assert b"Book added successfully" in response.data
+
     assert book.author == 'Robert Kiyosaki'
+    #  VALIDATE REDIRECT
+    assert response.request.path == "/"
 
 
 def test_add_book_if_user_not_logged_in(client):
@@ -111,6 +117,7 @@ def test_add_book_if_user_not_logged_in(client):
         'image_url': 'https://m.media-amazon.com/images/I/71+SWQ6xj1L._SY466_.jpg'
     }, follow_redirects=True)
     assert response.status_code == 401
+    assert response.request.path == "/add_book"
 
 
 def test_add_book_title_already_exists(client, first_user_with_books):
@@ -136,6 +143,8 @@ def test_add_book_title_already_exists(client, first_user_with_books):
     }, follow_redirects=True)
     assert len(books) == 2
     assert b"A book with this title already exists." in response.data
+    assert response.request.path == '/add_book'
+
 
 
 
