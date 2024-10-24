@@ -1,13 +1,13 @@
-from flask_testing import TestCase
-
 import pytest
 from flask_login import current_user
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from main import app, db, User, Book
+from config import TestConfig
+from main import db, User, create_app
+
+app = create_app(config_class=TestConfig)
 
 
-# class Test(TestCase):
 @pytest.fixture
 def client():
     app.config["TESTING"] = True
@@ -63,7 +63,7 @@ def test_login_user(client):
         'username': 'juhanv',
         'password': '123456'
     }, follow_redirects=True)
-    TestCase.assertTrue(current_user.first_name, 'Juhan')
+    assert current_user.first_name == 'Juhan'
     assert new_user.is_authenticated is True
     with client.session_transaction() as session:
         assert '_user_id' in session
@@ -107,9 +107,9 @@ def test_logout_user(client):
         'password': '123456'
     }, follow_redirects=True)
     assert login_response.status_code == 200
-    TestCase.assertTrue(new_user.is_active, True)
+    assert new_user.is_active is True
     client.get('/logout', follow_redirects=True)
-    TestCase.assertFalse(new_user.is_active, False)
+    assert current_user.is_authenticated is False
 
 
 def test_logout_user_not_in_session(client):
