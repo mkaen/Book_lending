@@ -17,8 +17,8 @@
   {% for book in my_books %}
   <li class="list-group-item d-flex align-items-center" style="background-color: #ACBCFF">
     <div class="ms-2 me-auto">
-      <div class="fw-bold">
-          <img src="{{book.image_url}}" style="width: 20px;"> {{ book.title }}  {% if due_books and book in due_books %}<span style="color: red"> Past Due</span>{% endif %}
+      <div class="fw">
+          <img src="{{book.image_url}}" style="width: 30px;"> {{ book.title }}  {% if due_books and book in due_books %}<span style="color: red"> Past Due</span>{% endif %}
       </div>
     </div>
     {% if book.lent_out == False %}
