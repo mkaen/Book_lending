@@ -11,13 +11,6 @@ from dotenv import load_dotenv
 import os
 import logging
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-handler = logging.FileHandler("book_lending.log", mode="w")
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-handler.setFormatter(formatter)
-logger.addHandler(handler)
-
 load_dotenv()
 
 
@@ -68,6 +61,13 @@ def create_app(config_class=None):
     else:
         app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE
         app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.DEBUG)
+    handler = logging.FileHandler("book_lending.log", mode="w")
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
 
     db.init_app(app)
 
@@ -287,16 +287,15 @@ def create_app(config_class=None):
         form = NewBookForm()
         user = db.get_or_404(User, current_user.id)
         if user and form.validate_on_submit():
-            title = form.title.data.title()
+            title = form.title.data
             author = form.author.data.title()
             image_url = form.image_url.data
-            existing_book = db.session.execute(
-                db.select(Book).where(Book.title == title, Book.author == author)
-            ).scalar_one_or_none()
+            all_db_books = Book.query.all()
+            existing_book = [book for book in all_db_books if title.lower() == book.title.lower() and author.lower() ==
+                             book.author.lower()]
             if existing_book:
                 logger.warning(f"Book already exists: {title}")
                 flash("A book with this title already exists.", "danger")
-
                 return redirect(url_for('add_book'))
             new_book = Book(title=title,
                             author=author,
@@ -332,11 +331,16 @@ def create_app(config_class=None):
                 method='pbkdf2:sha256',
                 salt_length=8
             )
-            existing_user = db.session.execute(db.select(User).where(User.email == email)).scalar()
-            if existing_user:
-                logger.warning("User already exists.")
+            existing_mail = db.session.execute(db.select(User).where(User.email == email)).scalar()
+            if existing_mail:
+                logger.warning("User with that email address already exists.")
                 flash('This email address already exists. Try to login instead.')
                 return redirect(url_for('login'))
+            existing_username = db.session.execute(db.select(User).where(User.username == username)).scalar()
+            if existing_username:
+                logger.warning("Tried to register with username that already exists.")
+                flash('This username already exists.')
+                return render_template('register.html', form=form, user=current_user)
             new_user = User(first_name=first_name.title(),
                             last_name=last_name.title(),
                             email=email,
@@ -369,7 +373,7 @@ def create_app(config_class=None):
                 return render_template('login.html', form=form, user=current_user)
             flash(f"Logged in successfully as {user.first_name}.")
             login_user(user, remember=form.remember_me.data)
-            logger.info("User logged in.")
+            logger.info(f"{username} logged in.")
             return redirect(url_for('home'))
         return render_template("login.html", form=form, user=current_user)
 
@@ -377,11 +381,11 @@ def create_app(config_class=None):
     @login_required
     def logout():
         """Logout current user and redirect to home page."""
-        if not current_user.is_authenticated:
-            flash('You must be logged in to log out')
-            return redirect(url_for('login'))
+        # if not current_user.is_authenticated:
+        #     flash('You must be logged in to log out')
+        #     return redirect(url_for('login'))
         logout_user()
-        logger.info("User logged out.")
+        logger.info("User logged out. Redirected to home page.")
         flash("You have been logged out. Hopefully we'll see you soon.")
         return redirect(url_for('home'))
 

@@ -72,6 +72,17 @@ def test_books_amount_in_temporary_db(client, first_user_with_books, second_user
     assert len(books) == 4
 
 
+def test_validate_book_ownership(client, first_user_with_books, second_user_with_books):
+    result_rich_dad = db.session.execute(db.select(Book).where(Book.title == 'Rich Dad Poor Dad')).first()
+    book_rich_dad = result_rich_dad[0] if result_rich_dad else None
+    assert book_rich_dad.owner_id == 1
+    result_hp = db.session.execute(db.select(Book).where(Book.title == "Harry Potter and the Sorcerer's Stone")).first()
+    book_hp = result_hp[0] if result_hp else None
+    assert book_hp.owner_id == 2
+    book_owner = db.get_or_404(User, 2)
+    assert book_owner.first_name == 'Priit'
+
+
 def login(client, username: str):
     """Log in the user."""
     response = client.post('/login', data={
@@ -97,8 +108,8 @@ def test_add_book(client, first_user_with_books):
     }, follow_redirects=True)
     assert response.status_code == 200
     assert response.request.path == "/"
-    result = db.session.execute(db.select(Book).where(Book.title == "Rich Dad'S Cashflow Quadrant: Rich Dad'S Guide To "
-                                                                  "Financial Freedom")).first()
+    result = db.session.execute(db.select(Book).where(Book.title == "Rich Dad's CASHFLOW Quadrant: Rich Dad's Guide "
+                                                                    "to Financial Freedom")).first()
     book = result[0] if result else None
     assert book is not None
     #  VALIDATE FLASH MESSAGE
@@ -137,24 +148,10 @@ def test_add_book_title_already_exists(client, first_user_with_books):
     #  CAPITALIZED & LOWER LETTERS
     response = client.post('/add_book', data={
         'title': 'RICH dad POOR DAD',
-        'author': 'Robert Kiyosaki',
+        'author': 'Robert kiyosaki',
         'image_url': 'https://upload.wikimedia.org/wikipedia/en/thumb/b/b9/Rich_Dad_Poor_Dad.jpg/220px'
                      '-Rich_Dad_Poor_Dad.jpg'
     }, follow_redirects=True)
     assert len(books) == 2
     assert b"A book with this title already exists." in response.data
     assert response.request.path == '/add_book'
-
-
-
-
-
-
-# def test_login_user(client, first_user_with_books):
-#     response = login(client, 'juhanv')
-#     TestCase.assertTrue(current_user.first_name, 'Juhan')
-#     assert current_user.is_authenticated is True
-#     with client.session_transaction() as session:
-#         assert '_user_id' in session
-#     assert response.status_code == 200
-#     assert b"Logged in successfully as Juhan." in response.data
