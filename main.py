@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, abort
 from flask_bootstrap import Bootstrap5
 from flask_login import login_required, LoginManager, current_user, login_user, logout_user, UserMixin
 from flask_sqlalchemy import SQLAlchemy
@@ -108,7 +108,7 @@ def create_app(config_class=None):
             flash("You have successfully changed lending duration")
         else:
             logger.warning("Unknown user trying to change lending duration")
-            flash("Oops, something went wrong")
+            return abort(401)
         return redirect(url_for('my_books'))
 
     @app.route('/return_book/<book_id>')
@@ -172,7 +172,7 @@ def create_app(config_class=None):
             return jsonify(success=True, message=message)
         else:
             logger.warning(f'Unauthorized user trying to (de)activate book {book.title}!')
-            return jsonify(success=False, error="You are not authorized to do that action.")
+            return jsonify(success=False, error="You are not authorized to do that action."), 401
 
     @app.route('/my_reserved_books')
     def my_reserved_books():

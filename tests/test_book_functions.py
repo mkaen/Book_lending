@@ -72,20 +72,20 @@ def login(client, username: str):
     }, follow_redirects=True)
     # print(f"\nLogin status code: {response.status_code}")
     # print(f"Is logged in: {current_user.is_authenticated}")
-    with client.session_transaction() as session:
-        print(f"\nUser id in session: {session.get('_user_id')}")
+    # with client.session_transaction() as session:
+    #     print(f"\nUser id in session: {session.get('_user_id')}")
     return response
 
 
 def logout(client):
     """Log out the user."""
     response = client.get('/logout', follow_redirects=True)
-    with client.session_transaction() as session:
-        print(f"\nUser id in session: {session.get('_user_id')}")
+    # with client.session_transaction() as session:
+    #     print(f"\nUser id in session: {session.get('_user_id')}")
     return response
 
 
-def test_deactivate_for_lending(client, first_user_with_books):
+def test_deactivate_and_activate_for_lending(client, first_user_with_books):
     login_response = login(client, 'juhanv')
     assert login_response.status_code == 200
     activated_books = db.session.execute(
@@ -94,12 +94,15 @@ def test_deactivate_for_lending(client, first_user_with_books):
     book = db.get_or_404(Book, 1)
     assert book.available_for_lending is True
     activation_response = client.get(f'/activate_to_borrow/{book.id}')
+    assert b"Book Rich Dad Poor Dad is set to unavailable for lending." in activation_response.data
     updated_book = db.get_or_404(Book, 1)
     assert updated_book.available_for_lending is False
     assert activation_response.status_code == 200
     activated_books = db.session.execute(db.session.query(Book)
                                          .filter(Book.available_for_lending == True)).scalars().all()
     assert len(activated_books) == 1
+    activation_response = client.get(f'/activate_to_borrow/{book.id}')
+    assert b"Book Rich Dad Poor Dad is set to available for lending." in activation_response.data
 
 
 def test_deactivate_for_lending_hiding_on_pages(client, first_user_with_books):
@@ -131,7 +134,7 @@ def test_cannot_deactivate_book_while_book_is_lent_out(client, first_user_with_b
     assert updated_book.available_for_lending is True
 
 
-def test_deactivate_book_while_user_is_unauthorized(client, first_user_with_books):
+def test_deactivate_book_while_user_is_anonymous(client, first_user_with_books):
     logout(client)
     book = db.get_or_404(Book, 2)
     # with client.session_transaction() as session:
@@ -141,3 +144,49 @@ def test_deactivate_book_while_user_is_unauthorized(client, first_user_with_book
     book = db.get_or_404(Book, 2)
     assert book.available_for_lending is True
     assert response.status_code == 401
+
+
+def test_cannot_deactivate_book_not_owner(client, first_user_with_books, second_user_with_books):
+    login(client, 'priitp')
+    book = db.get_or_404(Book, 1)
+    assert book.available_for_lending is True
+    response = client.get(f'/activate_to_borrow/1')
+    assert response.status_code == 401
+    assert book.available_for_lending is True
+
+
+def test_set_lending_duration(client, first_user_with_books):
+    login(client, 'juhanv')
+    user = db.get_or_404(User, 1)
+    assert user.duration == 28
+    duration_response = client.post(f'/change_duration/{user.id}', data={'duration': 12}, follow_redirects=True)
+    assert duration_response.status_code == 200
+    user = db.get_or_404(User, 1)
+    assert user.duration == 12
+    assert b"You have successfully changed lending duration" in duration_response.data
+
+
+def test_set_duration_user_anonymous(client, first_user_with_books):
+    logout(client)
+    # with client.session_transaction() as session:
+    #     print(f"\nUser id in session: {session.get('_user_id')}")
+    user = db.get_or_404(User, 1)
+    assert user.duration == 28
+    response = client.post(f'/change_duration/{user.id}', data={'duration': 12}, follow_redirects=True)
+    assert response.status_code == 401
+    assert user.duration == 28
+
+
+def test_set_lending_duration_not_change_borrowed_books(client, first_user_with_books, second_user_with_books):
+    login(client, 'priitp')
+    book = db.get_or_404(Book, 2)
+    client.get(f'/reserve_book/{book.id}')
+    client.get(f'/receive_book/{book.id}')
+    return_date = book.return_date
+    logout(client)
+    login(client, 'juhanv')
+    user = db.get_or_404(User, 1)
+    assert user.duration == 28
+    duration_response = client.post(f'/change_duration/{user.id}', data={'duration': 12}, follow_redirects=True)
+    assert duration_response.status_code == 200
+    assert book.return_date == return_date
