@@ -268,15 +268,18 @@ def create_app(config_class=None):
 
     @app.route('/searchbar/', methods=['GET'])
     def searchbar():
-        """Return a list of books that books author or title contains a search term and direct to searchbar result page."""
+        """
+        Return a list of books that books author or title contains a search term and redirect to searchbar result page.
+        """
         query = request.args.get('query')
-        if query:
+        if query and len(query) > 0 and not query.isspace():
             query_books = db.session.execute(db.select(Book)
                                              .where(or_(Book.title.like(f"%{query}%"),
                                                         Book.author.like(f"%{query}%")))
                                              .order_by(Book.title)).scalars().all()
         else:
             query_books = []
+            flash("Wrong input")
         logger.info(f"Search query: {query}")
         return render_template("searchbar.html", query_books=query_books, user=current_user, query=query)
 

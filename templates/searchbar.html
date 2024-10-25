@@ -18,8 +18,8 @@
       <img src="{{ book.image_url }}" class="card-img-top" alt="{{book.title}}" style=" background-size:
        cover; background-position: center">
       <div class="card-body">
-        <h5 class="card-title">{{book.title}}</h5>
-        {% if not book.reserved %}
+        <h5 class="card-title">{{book.title | safe}}</h5>
+        {% if not book.reserved and not user.is_anonymous %}
             <a href="{{ url_for('reserve_book', book_id=book.id) }}" class="btn btn-outline-primary align-items-center">Reserve</a>
           {% endif %}
       </div>
