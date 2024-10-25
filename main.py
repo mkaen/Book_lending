@@ -11,6 +11,13 @@ from dotenv import load_dotenv
 import os
 import logging
 
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+handler = logging.FileHandler("book_lending.log", mode="w")
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+
 load_dotenv()
 
 
@@ -61,13 +68,6 @@ def create_app(config_class=None):
     else:
         app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE
         app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
-    logger = logging.getLogger(__name__)
-    logger.setLevel(logging.DEBUG)
-    handler = logging.FileHandler("book_lending.log", mode="w")
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
 
     db.init_app(app)
 
