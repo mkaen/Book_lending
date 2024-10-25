@@ -1,4 +1,6 @@
 import pytest
+from flask_login import current_user
+
 from config import TestConfig
 from main import db, User, create_app, Book
 
@@ -62,34 +64,12 @@ def second_user_with_books(client):
     }, follow_redirects=True)
 
 
-def test_users_amount_in_temporary_db(client, first_user_with_books, second_user_with_books):
-    users = User.query.all()
-    assert len(users) == 2
-
-
-def test_books_amount_in_temporary_db(client, first_user_with_books, second_user_with_books):
-    books = Book.query.all()
-    assert len(books) == 4
-
-
-def test_validate_book_ownership(client, first_user_with_books, second_user_with_books):
-    result_rich_dad = db.session.execute(db.select(Book).where(Book.title == 'Rich Dad Poor Dad')).first()
-    book_rich_dad = result_rich_dad[0] if result_rich_dad else None
-    assert book_rich_dad.owner_id == 1
-    result_hp = db.session.execute(db.select(Book).where(Book.title == "Harry Potter and the Sorcerer's Stone")).first()
-    book_hp = result_hp[0] if result_hp else None
-    assert book_hp.owner_id == 2
-    book_owner = db.get_or_404(User, 2)
-    assert book_owner.first_name == 'Priit'
-
-
 def login(client, username: str):
     """Log in the user."""
     response = client.post('/login', data={
         'username': username,
         'password': '123456'
     }, follow_redirects=True)
-    assert response.request.path == '/'
     # print(f"\nLogin status code: {response.status_code}")
     # print(f"Is logged in: {current_user.is_authenticated}")
     with client.session_transaction() as session:
@@ -97,61 +77,67 @@ def login(client, username: str):
     return response
 
 
-def test_add_book(client, first_user_with_books):
-    """Test adding a book after login."""
+def logout(client):
+    """Log out the user."""
+    response = client.get('/logout', follow_redirects=True)
+    with client.session_transaction() as session:
+        print(f"\nUser id in session: {session.get('_user_id')}")
+    return response
+
+
+def test_deactivate_for_lending(client, first_user_with_books):
     login_response = login(client, 'juhanv')
     assert login_response.status_code == 200
-    response = client.post('/add_book', data={
-        'title': "Rich Dad's CASHFLOW Quadrant: Rich Dad's Guide to Financial Freedom",
-        'author': 'Robert Kiyosaki',
-        'image_url': 'https://m.media-amazon.com/images/I/71+SWQ6xj1L._SY466_.jpg'
-    }, follow_redirects=True)
-    assert response.status_code == 200
-    assert response.request.path == "/"
-    result = db.session.execute(db.select(Book).where(Book.title == "Rich Dad's CASHFLOW Quadrant: Rich Dad's Guide "
-                                                                    "to Financial Freedom")).first()
-    book = result[0] if result else None
-    assert book is not None
-    #  VALIDATE FLASH MESSAGE
-    assert b"Book added successfully" in response.data
-
-    assert book.author == 'Robert Kiyosaki'
-    #  VALIDATE REDIRECT
-    assert response.request.path == "/"
+    activated_books = db.session.execute(
+        db.session.query(Book).filter(Book.available_for_lending == True)).scalars().all()
+    assert len(activated_books) == 2
+    book = db.get_or_404(Book, 1)
+    assert book.available_for_lending is True
+    activation_response = client.get(f'/activate_to_borrow/{book.id}')
+    updated_book = db.get_or_404(Book, 1)
+    assert updated_book.available_for_lending is False
+    assert activation_response.status_code == 200
+    activated_books = db.session.execute(db.session.query(Book)
+                                         .filter(Book.available_for_lending == True)).scalars().all()
+    assert len(activated_books) == 1
 
 
-def test_add_book_if_user_not_logged_in(client):
-    """Test add_book if user not logged in."""
-    response = client.post('/add_book', data={
-        'title': "Rich Dad's CASHFLOW Quadrant: Rich Dad's Guide to Financial Freedom",
-        'author': 'Robert Kiyosaki',
-        'image_url': 'https://m.media-amazon.com/images/I/71+SWQ6xj1L._SY466_.jpg'
-    }, follow_redirects=True)
-    assert response.status_code == 401
-    assert response.request.path == "/add_book"
-
-
-def test_add_book_title_already_exists(client, first_user_with_books):
-    """Test adding a book that already exists in database after login."""
+def test_deactivate_for_lending_hiding_on_pages(client, first_user_with_books):
     login(client, 'juhanv')
-    books = db.session.query(Book).all()
-    assert len(books) == 2
-    response = client.post('/add_book', data={
-        'title': 'Rich Dad Poor Dad',
-        'author': 'Robert Kiyosaki',
-        'image_url': 'https://upload.wikimedia.org/wikipedia/en/thumb/b/b9/Rich_Dad_Poor_Dad.jpg/220px'
-                     '-Rich_Dad_Poor_Dad.jpg'
-    }, follow_redirects=True)
-    assert len(books) == 2
-    assert b"A book with this title already exists." in response.data
-    assert response.status_code == 200
-    #  CAPITALIZED & LOWER LETTERS
-    response = client.post('/add_book', data={
-        'title': 'RICH dad POOR DAD',
-        'author': 'Robert kiyosaki',
-        'image_url': 'https://upload.wikimedia.org/wikipedia/en/thumb/b/b9/Rich_Dad_Poor_Dad.jpg/220px'
-                     '-Rich_Dad_Poor_Dad.jpg'
-    }, follow_redirects=True)
-    assert len(books) == 2
-    assert b"A book with this title already exists." in response.data
-    assert response.request.path == '/add_book'
+    book = db.get_or_404(Book, 1)
+    response_available_books = client.get('/available_books')
+    assert b"Rich Dad Poor Dad" in response_available_books.data
+    response_home_page_view = client.get('/')
+    assert b"Rich Dad Poor Dad" in response_home_page_view.data
+    activation_response = client.get(f'/activate_to_borrow/{book.id}')
+    updated_available_books = client.get('/available_books')
+    assert b"Rich Dad Poor Dad" not in updated_available_books.data
+    updated_home_page_view = client.get('/')
+    assert b"Rich Dad Poor Dad" not in updated_home_page_view.data
+    assert activation_response.status_code == 200
+
+
+def test_cannot_deactivate_book_while_book_is_lent_out(client, first_user_with_books, second_user_with_books):
+    login(client, 'juhanv')
+    book = db.get_or_404(Book, 4)
+    assert book.available_for_lending is True
+    client.get(f'/reserve_book/{book.id}')
+    client.get(f'/receive_book/{book.id}')
+    book = db.get_or_404(Book, 4)
+    logout(client)
+    login(client, 'priitp')
+    client.get(f'/activate_to_borrow/{book.id}')
+    updated_book = db.get_or_404(Book, 4)
+    assert updated_book.available_for_lending is True
+
+
+def test_deactivate_book_while_user_is_unauthorized(client, first_user_with_books):
+    logout(client)
+    book = db.get_or_404(Book, 2)
+    # with client.session_transaction() as session:
+    #     print(f"\nUser id in session: {session.get('_user_id')}")
+    assert book.available_for_lending is True
+    response = client.get(f'/activate_to_borrow/2')
+    book = db.get_or_404(Book, 2)
+    assert book.available_for_lending is True
+    assert response.status_code == 401

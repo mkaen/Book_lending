@@ -211,7 +211,7 @@ def create_app(config_class=None):
             flash(f'Book "{book.title}" is already reserved')
         return redirect(url_for(current_page))
 
-    @app.route('/hand_over/<book_id>', methods=['GET', 'POST'])
+    @app.route('/receive_book/<book_id>', methods=['GET', 'POST'])
     @login_required
     def receive_book(book_id):
         """

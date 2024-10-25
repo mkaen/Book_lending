@@ -143,6 +143,8 @@ def test_logout_user(client, add_user):
     logout_response = client.get('/logout', follow_redirects=True)
     # assert b"You have been logged out. Hopefully we'll see you soon." in logout_response.data
     assert current_user.is_authenticated is False
+    with client.session_transaction() as session:
+        assert '_user_id' not in session
 
 
 def test_logout_user_not_in_session(client):
