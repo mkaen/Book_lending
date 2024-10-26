@@ -166,8 +166,20 @@ def test_add_book_author_name_too_short(client, first_user_with_books):
                      '-Rich_Dad_Poor_Dad.jpg'
     }, follow_redirects=True)
     assert b"Field must be at least 4 characters long." in response.data
+    assert response.request.path == '/add_book'
     books = db.session.query(Book).all()
     assert len(books) == 2
+
+
+def test_add_book_wrong_url(client, first_user_with_books):
+    login(client, "juhanv")
+    response = client.post('/add_book', data={
+        'title': 'Rich Dad Poor Dad',
+        'author': 'R K',
+        'image_url': 'https://upload.wikimedia.org/wikipedia'
+    }, follow_redirects=True)
+    assert b"Image URL is not valid. Please try again."
+    assert response.request.path == '/add_book'
 
 
 def test_search_books_by_author(client, first_user_with_books, second_user_with_books):
