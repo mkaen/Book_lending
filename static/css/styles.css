@@ -58,3 +58,7 @@ h6 {
     box-shadow: 0 4px 8px rgba(0.4, 0.4, 0.4, 0.9);
 }
 
+input[type='search'] {
+    width: 230px
+}
+
