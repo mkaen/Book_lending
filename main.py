@@ -10,6 +10,7 @@ from forms import LoginForm, RegistrationForm, NewBookForm
 from dotenv import load_dotenv
 import os
 import logging
+import requests
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -59,12 +60,28 @@ class User(UserMixin, db.Model):
     reserved_books = Relationship('Book', foreign_keys='Book.lender_id', back_populates='book_lender')
 
 
+def check_image_url(url):
+    """Check image url and return True if it exists and image file is correct and undamaged."""
+    try:
+        response = requests.get(url)
+        if response.status_code == 200 and 'image' in response.headers['Content-Type']:
+            return True
+        else:
+            return False
+    except requests.exceptions.RequestException as e:
+        print(f"Error checking URL: {e}")
+        return False
+
+
 def create_app(config_class=None):
     """Create and configure Flask application."""
     app = Flask(__name__)
 
     if config_class:
+        global handler
         app.config.from_object(config_class)
+        handler = logging.FileHandler("test_book_lending.log", mode="w")
+
     else:
         app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE
         app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -262,6 +279,7 @@ def create_app(config_class=None):
         """Return a list of available books that not reserved and direct to available books page."""
         books = (db.session.execute(db.select(Book).where(Book.reserved == False, Book.available_for_lending == True))
                  .scalars().all())
+        logger.info(f"Went to page: Available books")
         if not books:
             logger.debug("There's no available books. Returning empty list")
         return render_template("available_books.html", available_books=books, user=current_user)
@@ -289,10 +307,15 @@ def create_app(config_class=None):
         """Create and add a new book to the lending environment. Validate and direct user to the book adding page."""
         form = NewBookForm()
         user = db.get_or_404(User, current_user.id)
+        logger.info("Went to add a new book page")
         if user and form.validate_on_submit():
             title = form.title.data
             author = form.author.data.title()
             image_url = form.image_url.data
+            if not check_image_url(image_url):
+                flash("Image URL is not valid. Please try again.")
+                logger.error(f"Image URL: {image_url} is not valid")
+                return render_template('add_book.html', form=form, user=current_user)
             all_db_books = Book.query.all()
             existing_book = [book for book in all_db_books if title.lower() == book.title.lower() and author.lower() ==
                              book.author.lower()]
@@ -308,11 +331,10 @@ def create_app(config_class=None):
                             lent_out=False,
                             owner_id=user.id,
                             available_for_lending=True)
-            logging.info(f'Created new book: {title}.')
             db.session.add(new_book)
             db.session.commit()
             flash("Book added successfully")
-            logger.info(f"Added new book into database: {new_book.title}")
+            logger.info(f"Created new book and added book into database: {new_book.title}")
             return redirect(url_for('home'))
         return render_template("add_book.html", form=form, user=current_user)
 

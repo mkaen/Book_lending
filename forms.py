@@ -25,6 +25,6 @@ class LoginForm(FlaskForm):
 
 class NewBookForm(FlaskForm):
     title = StringField('Title', validators=[DataRequired()])
-    author = StringField('Author', validators=[DataRequired()])
+    author = StringField('Author', validators=[DataRequired(), Length(min=4)])
     image_url = StringField('Image URL', validators=[DataRequired()])
     submit = SubmitField('Add Book')
