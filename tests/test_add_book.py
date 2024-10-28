@@ -1,5 +1,6 @@
 from main import db, User, Book
 from setup_users_and_books import client, first_user_with_books, second_user_with_books
+from authorization import login
 
 
 def test_users_amount_in_temporary_db(client, first_user_with_books, second_user_with_books):
@@ -21,20 +22,6 @@ def test_validate_book_ownership(client, first_user_with_books, second_user_with
     assert book_hp.owner_id == 2
     book_owner = db.get_or_404(User, 2)
     assert book_owner.first_name == 'Priit'
-
-
-def login(client, username: str):
-    """Log in the user."""
-    response = client.post('/login', data={
-        'username': username,
-        'password': '123456'
-    }, follow_redirects=True)
-    assert response.request.path == '/'
-    # print(f"\nLogin status code: {response.status_code}")
-    # print(f"Is logged in: {current_user.is_authenticated}")
-    with client.session_transaction() as session:
-        print(f"\nUser id in session: {session.get('_user_id')}")
-    return response
 
 
 def test_add_book(client, first_user_with_books):

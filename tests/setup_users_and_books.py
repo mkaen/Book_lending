@@ -77,3 +77,18 @@ def add_user(client):
         )
         db.session.add(new_user)
         db.session.commit()
+
+
+@pytest.fixture
+def add_third_user(client):
+    with client.application.app_context():
+        new_user = User(
+            first_name='Toomas',
+            last_name='Kruus',
+            email='toomas.kruus@gmail.com',
+            username='toomask',
+            password=generate_password_hash('123456', method='pbkdf2:sha256', salt_length=8),
+            duration=28
+        )
+        db.session.add(new_user)
+        db.session.commit()

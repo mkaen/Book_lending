@@ -217,11 +217,14 @@ def create_app(config_class=None):
         """
         book = db.get_or_404(Book, book_id)
         current_page = request.args.get('current_page', default='home')
+        if not book:
+            logger.warning(f"User id: {current_user.id} tried to reserve book with id {book_id}. Book not found.")
+            return abort(404)
         if book.owner_id == current_user.id:
             flash('You cannot reserve your own book!')
             logger.debug("Book owner tries to reserve his own book!")
             return redirect(url_for(current_page))
-        if book and not book.reserved:
+        if not book.reserved:
             book.reserved = True
             book.lender_id = current_user.id
             db.session.commit()

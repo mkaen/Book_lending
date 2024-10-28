@@ -1,28 +1,6 @@
-from flask_login import current_user
-
 from main import db, User, Book
 from setup_users_and_books import client, first_user_with_books, second_user_with_books
-
-
-def login(client, username: str):
-    """Log in the user."""
-    response = client.post('/login', data={
-        'username': username,
-        'password': '123456'
-    }, follow_redirects=True)
-    # print(f"\nLogin status code: {response.status_code}")
-    # print(f"Is logged in: {current_user.is_authenticated}")
-    # with client.session_transaction() as session:
-    #     print(f"\nUser id in session: {session.get('_user_id')}")
-    return response
-
-
-def logout(client):
-    """Log out the user."""
-    response = client.get('/logout', follow_redirects=True)
-    # with client.session_transaction() as session:
-    #     print(f"\nUser id in session: {session.get('_user_id')}")
-    return response
+from authorization import login, logout
 
 
 def test_deactivate_and_activate_for_lending(client, first_user_with_books):
