@@ -1,39 +1,8 @@
-import pytest
 from flask_login import current_user
-from werkzeug.security import check_password_hash, generate_password_hash
+from werkzeug.security import check_password_hash
 
-from config import TestConfig
-from main import db, User, create_app
-
-app = create_app(config_class=TestConfig)
-
-
-@pytest.fixture
-def client():
-    app.config["TESTING"] = True
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///test_book_lending.db'
-    app.config['WTF_CSRF_ENABLED'] = False
-    with app.test_client() as client:
-        with app.app_context():
-            db.create_all()
-        yield client
-        with app.app_context():
-            db.drop_all()
-
-
-@pytest.fixture
-def add_user(client):
-    with client.application.app_context():
-        new_user = User(
-            first_name='Juhan',
-            last_name='viik',
-            email='juhan.viik@gmail.com',
-            username='juhanv',
-            password=generate_password_hash('123456', method='pbkdf2:sha256', salt_length=8),
-            duration=28
-        )
-        db.session.add(new_user)
-        db.session.commit()
+from main import db, User
+from setup_users_and_books import client, add_user
 
 
 def test_register_new_user(client):
@@ -141,7 +110,7 @@ def test_logout_user(client, add_user):
     assert login_response.status_code == 200
     assert current_user.is_active is True
     logout_response = client.get('/logout', follow_redirects=True)
-    # assert b"You have been logged out. Hopefully we'll see you soon." in logout_response.data
+    assert b"You have been logged out. Hopefully we'll see you soon." in logout_response.data
     assert current_user.is_authenticated is False
     with client.session_transaction() as session:
         assert '_user_id' not in session

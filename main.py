@@ -12,13 +12,6 @@ import os
 import logging
 import requests
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-handler = logging.FileHandler("book_lending.log", mode="w")
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-handler.setFormatter(formatter)
-logger.addHandler(handler)
-
 load_dotenv()
 
 
@@ -77,14 +70,22 @@ def create_app(config_class=None):
     """Create and configure Flask application."""
     app = Flask(__name__)
 
+    logger = logging.getLogger(__name__)
+    handler = ""
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
     if config_class:
-        global handler
         app.config.from_object(config_class)
         handler = logging.FileHandler("test_book_lending.log", mode="w")
-
+        logger.setLevel(logging.DEBUG)
     else:
         app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE
         app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+        handler = logging.FileHandler("book_lending.log", mode="w")
+
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
 
     db.init_app(app)
 

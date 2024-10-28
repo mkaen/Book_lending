@@ -1,65 +1,5 @@
-import pytest
-from config import TestConfig
-from main import db, User, create_app, Book
-
-app = create_app(config_class=TestConfig)
-
-
-@pytest.fixture
-def client():
-    app.config["TESTING"] = True
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///test_book_lending.db'
-    app.config['WTF_CSRF_ENABLED'] = False
-    with app.test_client() as client:
-        with app.app_context():
-            db.create_all()
-        yield client
-        with app.app_context():
-            db.drop_all()
-
-
-@pytest.fixture
-def first_user_with_books(client):
-    client.post('/register', data={
-        'first_name': 'Juhan',
-        'last_name': 'viik',
-        'email': 'juhan.viik@gmail.com',
-        'username': 'juhanv',
-        'password': '123456',
-        'confirm_password': '123456'
-    }, follow_redirects=True)
-    client.post('/add_book', data={
-        'title': 'Rich Dad Poor Dad',
-        'author': 'Robert Kiyosaki',
-        'image_url': 'https://upload.wikimedia.org/wikipedia/en/thumb/b/b9/Rich_Dad_Poor_Dad.jpg/220px-Rich_Dad_Poor_Dad.jpg'
-    }, follow_redirects=True)
-    client.post('/add_book', data={
-        'title': 'Before You Quit Your Job',
-        'author': 'Robert Kiyosaki',
-        'image_url': 'https://m.media-amazon.com/images/I/81e59Ch9oJL._SY466_.jpg'
-    }, follow_redirects=True)
-
-
-@pytest.fixture
-def second_user_with_books(client):
-    client.post('/register', data={
-        'first_name': 'Priit',
-        'last_name': 'pätt',
-        'email': 'priit.patt@gmail.com',
-        'username': 'priitp',
-        'password': '123456',
-        'confirm_password': '123456'
-    }, follow_redirects=True)
-    client.post('/add_book', data={
-        'title': "Harry Potter and the Sorcerer's Stone",
-        'author': 'J. K. Rowling',
-        'image_url': 'https://m.media-amazon.com/images/I/51pg8dBgESL._SL350_.jpg'
-    }, follow_redirects=True)
-    client.post('/add_book', data={
-        'title': 'Harry Potter and the Chamber of Secrets',
-        'author': 'J. K. Rowling',
-        'image_url': 'https://i.thriftbooks.com/api/imagehandler/m/4B125D9125088953EA6F6BCF2D4EE168B5E4E8F0.jpeg'
-    }, follow_redirects=True)
+from main import db, User, Book
+from setup_users_and_books import client, first_user_with_books, second_user_with_books
 
 
 def test_users_amount_in_temporary_db(client, first_user_with_books, second_user_with_books):
@@ -180,31 +120,3 @@ def test_add_book_wrong_url(client, first_user_with_books):
     }, follow_redirects=True)
     assert b"Image URL is not valid. Please try again."
     assert response.request.path == '/add_book'
-
-
-def test_search_books_by_author(client, first_user_with_books, second_user_with_books):
-    response = client.get('/searchbar/?query=kiyosaki', follow_redirects=True)
-    assert response.status_code == 200
-    assert b"Rich Dad Poor Dad" in response.data
-    assert b"Before You Quit Your Job" in response.data
-    assert b"Harry Potter and the Sorcerer's Stone" not in response.data
-    assert b"Harry Potter and the Chamber of Secrets" not in response.data
-
-
-def test_search_books_by_title(client, first_user_with_books, second_user_with_books):
-    response = client.get('/searchbar/?query=potter', follow_redirects=True)
-    assert response.status_code == 200
-    assert b"Harry Potter and the Sorcerer's Stone" in response.data
-    assert b"Harry Potter and the Chamber of Secrets" in response.data
-    assert b"Rich Dad Poor Dad" not in response.data
-    assert b"Before You Quit Your Job" not in response.data
-
-
-def test_search_books_blank_input(client, first_user_with_books, second_user_with_books):
-    response = client.get('/searchbar/?query= ', follow_redirects=True)
-    assert response.status_code == 200
-    assert b"Wrong input" in response.data
-    assert b"Harry Potter and the Sorcerer's Stone" not in response.data
-    assert b"Harry Potter and the Chamber of Secrets" not in response.data
-    assert b"Rich Dad Poor Dad" not in response.data
-    assert b"Before You Quit Your Job" not in response.data
