@@ -119,14 +119,17 @@ def create_app(config_class=None):
     def change_duration(user_id):
         user = db.get_or_404(User, user_id)
         duration = request.form.get('duration')
-        if user and duration and request.method == 'POST':
-            user.duration = int(duration)
-            db.session.commit()
-            logger.info(f'User changed lending duration to {user.duration}')
-            flash("You have successfully changed lending duration")
-        else:
-            logger.warning("Unknown user trying to change lending duration")
+        if not duration or not duration.isdigit() or not (1 <= int(duration) <= 100):
+            flash('Invalid duration value')
+            logger.warning(f'{current_user} is trying to set invalid duration: {duration}')
+            return redirect(url_for('my_books'))
+        if current_user.id != user.id:
+            logger.warning("Unauthorized user is trying to change lending duration")
             return abort(401)
+        user.duration = int(duration)
+        db.session.commit()
+        logger.info(f'User {user.username} changed lending duration to {user.duration}')
+        flash("You have successfully changed lending duration")
         return redirect(url_for('my_books'))
 
     @app.route('/return_book/<book_id>')

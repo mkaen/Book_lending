@@ -1,3 +1,5 @@
+from flask_login import current_user
+
 from main import db, User, Book
 from setup_users_and_books import client, first_user_with_books, second_user_with_books
 
@@ -115,6 +117,12 @@ def test_set_duration_user_anonymous(client, first_user_with_books):
     assert user.duration == 28
 
 
+def test_set_duration_current_user_not_allowed(client, first_user_with_books, second_user_with_books):
+    login(client, 'juhanv')
+    response = client.post(f'/change_duration/2', data={'duration': 12}, follow_redirects=True)
+    assert response.status_code == 401
+
+
 def test_set_lending_duration_not_change_borrowed_books(client, first_user_with_books, second_user_with_books):
     login(client, 'priitp')
     book = db.get_or_404(Book, 2)
@@ -128,3 +136,30 @@ def test_set_lending_duration_not_change_borrowed_books(client, first_user_with_
     duration_response = client.post(f'/change_duration/{user.id}', data={'duration': 12}, follow_redirects=True)
     assert duration_response.status_code == 200
     assert book.return_date == return_date
+
+
+def test_set_lending_duration_out_of_limit(client, first_user_with_books, second_user_with_books):
+    login(client, 'juhanv')
+    user = db.get_or_404(User, 1)
+    assert user.duration == 28
+    response_below = client.post(f'/change_duration/{user.id}', data={'duration': 0},
+                                 follow_redirects=True)
+    user = db.get_or_404(User, 1)
+    assert user.duration == 28
+    assert b"Invalid duration value" in response_below.data
+    response_above = client.post(f'/change_duration/{user.id}', data={'duration': 101},
+                                 follow_redirects=True)
+    user = db.get_or_404(User, 1)
+    assert b"Invalid duration value" in response_above.data
+    assert user.duration == 28
+
+
+def test_set_lending_duration_wrong_input(client, first_user_with_books, second_user_with_books):
+    login(client, 'juhanv')
+    user = db.get_or_404(User, 1)
+    assert user.duration == 28
+    response_wrong_input = client.post(f'/change_duration/{user.id}', data={'duration': 'a'},
+                                       follow_redirects=True)
+    user = db.get_or_404(User, 1)
+    assert user.duration == 28
+    assert b"Invalid duration value" in response_wrong_input.data
