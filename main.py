@@ -267,18 +267,22 @@ def create_app(config_class=None):
         book = db.get_or_404(Book, book_id)
         current_page = request.args.get('current_page', default='home')
         if not book:
-            logger.warning("You are trying to cancel the reservation of the book that doesn't exist.")
-            flash("There's no such book")
+            logger.warning(f"User id: {current_user.id} is trying to cancel the reservation of the"
+                           f" book id: {book.id} that doesn't exist.")
             return redirect(url_for(current_page))
-        if book.book_lender == current_user or book.owner_id == current_user.id:
+        if book.owner_id == current_user.id or book.book_lender == current_user:
+            if not book.reserved:
+                logger.warning(f"User id: {current_user.id} is trying to cancel the book id: {book.id}"
+                               f" while book is not reserved.")
+                return abort(404)
             book.reserved = False
             book.book_lender = None
             db.session.commit()
-            logger.info(f"Book {book.title} reservation has been cancelled")
+            logger.info(f"Book {book.title} reservation has been cancelled by user id: {current_user.id}")
             flash(f'Book "{book.title}" reservation is successfully cancelled')
         else:
-            logger.warning("You are trying to cancel the reservation of the")
-            flash("You are not authorized to cancel the reservation")
+            logger.warning(f"User id: {current_user.id} is trying to cancel the reservation of the book id: {book.id}")
+            return abort(401)
         return redirect(url_for(current_page))
 
     @app.route('/available_books', methods=['GET', 'POST'])
@@ -286,7 +290,7 @@ def create_app(config_class=None):
         """Return a list of available books that not reserved and direct to available books page."""
         books = (db.session.execute(db.select(Book).where(Book.reserved == False, Book.available_for_lending == True))
                  .scalars().all())
-        logger.info(f"Went to page: Available books")
+        logger.info(f"User id: {current_user.id} went to page: Available books")
         if not books:
             logger.debug("There's no available books. Returning empty list")
         return render_template("available_books.html", available_books=books, user=current_user)
