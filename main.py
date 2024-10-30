@@ -109,7 +109,7 @@ def create_app(config_class=None):
 
         Show all the books in the database.
         """
-        logger.info(f"User id: {current_user.id} went to Home Page")
+        logger.info(f"User went to Home Page")
         result = db.session.execute(db.select(Book).where(Book.available_for_lending == True))
         all_books = result.scalars().all()
         sorted_books = list(sorted(all_books, key=lambda book: (book.author, book.title)))
@@ -166,6 +166,7 @@ def create_app(config_class=None):
         return redirect(url_for(current_page))
 
     @app.route('/my_books')
+    @login_required
     def my_books():
         """Filter your own added books and direct to my_books page."""
         logger.info("Went to My Books page")
@@ -197,6 +198,7 @@ def create_app(config_class=None):
             return jsonify(success=False, error="You are not authorized to do that action."), 401
 
     @app.route('/my_reserved_books')
+    @login_required
     def my_reserved_books():
         """Find books that you have reserved and direct the user to the my_reserved_books page."""
         books = db.session.execute(db.select(Book).where(Book.book_lender == current_user)
@@ -296,7 +298,7 @@ def create_app(config_class=None):
         """Return a list of available books that not reserved and direct to available books page."""
         books = (db.session.execute(db.select(Book).where(Book.reserved == False, Book.available_for_lending == True))
                  .scalars().all())
-        logger.info(f"User id: {current_user.id} went to page: Available books")
+        logger.info(f"User went to page: Available books")
         if not books:
             logger.debug("There's no available books. Returning empty list")
         return render_template("available_books.html", available_books=books, user=current_user)
@@ -315,7 +317,10 @@ def create_app(config_class=None):
         else:
             query_books = []
             flash("Wrong input")
-        logger.info(f"User id: {current_user.id} search query: {query}")
+        if current_user.is_authenticated:
+            logger.info(f"User id: {current_user.id} search query: {query}")
+        else:
+            logger.info(f"Not authenticated user search query: {query}")
         return render_template("searchbar.html", query_books=query_books, user=current_user, query=query)
 
     @app.route('/add_book', methods=['GET', 'POST'])
@@ -376,14 +381,12 @@ def create_app(config_class=None):
             )
             existing_mail = db.session.execute(db.select(User).where(User.email == email)).scalar()
             if existing_mail:
-                logger.warning(f"User id: {current_user.id} failed to create new user. Email: {email} address already "
-                               f"exists.")
+                logger.warning(f"User failed to create new user. Email: {email} address already exists.")
                 flash('This email address already exists. Try to login instead.')
                 return redirect(url_for('login'))
             existing_username = db.session.execute(db.select(User).where(User.username == username)).scalar()
             if existing_username:
-                logger.warning(f"User id: {current_user.id} failed to register with username: {username}. Username "
-                               f"already exists.")
+                logger.warning(f"User failed to register with username: {username}. Username already exists.")
                 flash('This username already exists.')
                 return render_template('register.html', form=form, user=current_user)
             new_user = User(first_name=first_name.title(),
@@ -415,7 +418,7 @@ def create_app(config_class=None):
                 return redirect(url_for('login'))
             if not check_password_hash(user.password, password):
                 flash('Invalid password. Please try again')
-                logger.debug(f" User id: {current_user.id} and username: {username} failed as inserted wrong password")
+                logger.debug(f" Username: {username} failed as inserted wrong password")
                 return render_template('login.html', form=form, user=current_user)
             flash(f"Logged in successfully as {user.first_name}.")
             login_user(user, remember=form.remember_me.data)
@@ -427,11 +430,9 @@ def create_app(config_class=None):
     @login_required
     def logout():
         """Logout current user and redirect to home page."""
-        # if not current_user.is_authenticated:
-        #     flash('You must be logged in to log out')
-        #     return redirect(url_for('login'))
+        user_id = current_user.id
         logout_user()
-        logger.info(f"User id: {current_user.id} logged out.")
+        logger.info(f"User id: {user_id} logged out.")
         flash("You have been logged out. Hopefully we'll see you soon.")
         return redirect(url_for('home'))
 
