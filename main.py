@@ -121,7 +121,7 @@ def create_app(config_class=None):
         duration = request.form.get('duration')
         if not duration or not duration.isdigit() or not (1 <= int(duration) <= 100):
             flash('Invalid duration value')
-            logger.warning(f'{current_user} is trying to set invalid duration: {duration}')
+            logger.error(f'User id: {current_user.id} is trying to set invalid duration: {duration}')
             return redirect(url_for('my_books'))
         if current_user.id != user.id:
             logger.warning("Unauthorized user is trying to change lending duration")
@@ -168,7 +168,7 @@ def create_app(config_class=None):
         """Filter your own added books and direct to my_books page."""
         logger.info("Went to My Books page")
         books = db.session.execute(db.select(Book).where(Book.owner_id == current_user.id)).scalars().all()
-        due_books = [book for book in books if book.return_date is not None and book.return_date < datetime.now()]
+        due_books = [book for book in books if book.return_date is not None and book.return_date < datetime.now().date()]
 
         if not books:
             logger.info("User has no books to show in My Books page")
@@ -202,7 +202,7 @@ def create_app(config_class=None):
                                    .order_by(Book.id)).scalars().all()
         due_books = [book for book in books if book.return_date is not None and book.return_date < datetime.now()]
         if not books:
-            logger.info("User has no reserved books.")
+            logger.info(f"User id: {current_user.id} has no reserved books.")
             flash("You have no books reserved.")
         return render_template("my_reserved_books.html", my_books=books, user=current_user, due_books=due_books)
 
@@ -248,8 +248,9 @@ def create_app(config_class=None):
         current_page = request.args.get('current_page', default='home')
         if book and not book.lent_out:
             if book.book_lender == current_user or book.book_owner == current_user:
+                user = db.get_or_404(User, current_user.id)
                 current_date = datetime.now().date()
-                new_date = current_date + timedelta(days=28)
+                new_date = current_date + timedelta(days=user.duration)
                 book.return_date = new_date
                 book.lent_out = True
                 db.session.commit()

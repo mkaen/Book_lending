@@ -3,6 +3,7 @@ from setup_users_and_books import client, first_user_with_books, second_user_wit
 from authorization import login, logout
 
 
+# BOOK ACTIVATION
 def test_deactivate_and_activate_for_lending(client, first_user_with_books):
     login_response = login(client, 'juhanv')
     assert login_response.status_code == 200
@@ -73,6 +74,7 @@ def test_cannot_deactivate_book_not_owner(client, first_user_with_books, second_
     assert book.available_for_lending is True
 
 
+#  SET USER BORROWING DURATION
 def test_set_lending_duration(client, first_user_with_books):
     login(client, 'juhanv')
     user = db.get_or_404(User, 1)
@@ -103,16 +105,17 @@ def test_set_duration_current_user_not_allowed(client, first_user_with_books, se
 
 def test_set_lending_duration_not_change_borrowed_books(client, first_user_with_books, second_user_with_books):
     login(client, 'priitp')
+    client.get('/reserve_book/2')
+    client.get('/receive_book/2')
     book = db.get_or_404(Book, 2)
-    client.get(f'/reserve_book/{book.id}')
-    client.get(f'/receive_book/{book.id}')
     return_date = book.return_date
     logout(client)
     login(client, 'juhanv')
     user = db.get_or_404(User, 1)
     assert user.duration == 28
-    duration_response = client.post(f'/change_duration/{user.id}', data={'duration': 12}, follow_redirects=True)
+    duration_response = client.post('/change_duration/1', data={'duration': 12}, follow_redirects=True)
     assert duration_response.status_code == 200
+    book = db.get_or_404(Book, 2)
     assert book.return_date == return_date
 
 

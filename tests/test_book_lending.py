@@ -180,7 +180,7 @@ def test_receive_book_already_received(client, add_third_user, first_user_with_b
 def test_receive_book_set_return_date(client, add_third_user, first_user_with_books):
     login(client, 'toomask')
     client.get('/reserve_book/1', follow_redirects=True)
-    response = client.get('/receive_book/1', follow_redirects=True)
+    client.get('/receive_book/1', follow_redirects=True)
     book = db.get_or_404(Book, 1)
     assert book.return_date == (datetime.now().date() + timedelta(days=28))
 

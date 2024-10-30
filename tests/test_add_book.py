@@ -47,7 +47,7 @@ def test_add_book(client, first_user_with_books):
     assert response.request.path == "/"
 
 
-def test_add_book_if_user_not_logged_in(client):
+def test_add_book_user_not_authenticated(client):
     """Test add_book if user not logged in."""
     response = client.post('/add_book', data={
         'title': "Rich Dad's CASHFLOW Quadrant: Rich Dad's Guide to Financial Freedom",
