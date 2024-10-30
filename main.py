@@ -1,9 +1,9 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, abort
 from flask_bootstrap import Bootstrap5
 from flask_login import login_required, LoginManager, current_user, login_user, logout_user, UserMixin
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import Integer, String, DateTime, Boolean, or_
+from sqlalchemy import Integer, String, DateTime, Boolean, or_, Date
 from sqlalchemy.orm import mapped_column, Mapped, DeclarativeBase, Relationship
 from werkzeug.security import generate_password_hash, check_password_hash
 from forms import LoginForm, RegistrationForm, NewBookForm
@@ -30,7 +30,7 @@ class Book(db.Model):
     title: Mapped[String] = mapped_column(String(250), nullable=False, unique=True)
     author: Mapped[String] = mapped_column(String(250), nullable=False)
     image_url: Mapped[String] = mapped_column(String(250), nullable=False)
-    return_date: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    return_date: Mapped[date] = mapped_column(Date, nullable=True)
     reserved: Mapped[bool] = mapped_column(Boolean, nullable=False)
     lent_out: Mapped[bool] = mapped_column(Boolean, nullable=False)
     available_for_lending: Mapped[bool] = mapped_column(Boolean, nullable=False)
@@ -132,7 +132,7 @@ def create_app(config_class=None):
         flash("You have successfully changed lending duration")
         return redirect(url_for('my_books'))
 
-    @app.route('/return_book/<book_id>')
+    @app.route('/return_book/<int:book_id>')
     @login_required
     def return_book(book_id):
         """
@@ -147,19 +147,19 @@ def create_app(config_class=None):
         current_page = request.args.get('current_page', default='home')
         if not book:
             flash('Book not found')
-            logger.warning("Book you are trying to return not found")
+            logger.warning(f"Book id: {book.id} you are trying to return not found")
             return redirect(url_for(current_page))
-        validate_user = current_user.id == book.lender_id or current_user.id == book.owner_id
+        validate_user = current_user.id == book.owner_id or current_user.id == book.lender_id
         if not validate_user:
-            logger.info(f'Unauthorized user is trying to return the book "{book.title}"')
+            logger.info(f'Unauthorized user id:{current_user.id} is trying to return the book id: {book.id}')
             flash("There is no such book you have borrowed!", category='danger')
-            return redirect(url_for(current_page))
+            return abort(401)
         book.return_date = None
         book.reserved = False
         book.lender_id = None
         book.lent_out = False
         db.session.commit()
-        logger.info(f'User returned book "{book.title}" successfully.')
+        logger.info(f'User id: {current_user.id} returned book id: {book.id} successfully.')
         flash(f'You have returned book "{book.title}" successfully')
         return redirect(url_for(current_page))
 
@@ -206,7 +206,7 @@ def create_app(config_class=None):
             flash("You have no books reserved.")
         return render_template("my_reserved_books.html", my_books=books, user=current_user, due_books=due_books)
 
-    @app.route('/reserve_book/<book_id>', methods=['GET', 'POST'])
+    @app.route('/reserve_book/<int:book_id>', methods=['GET', 'POST'])
     @login_required
     def reserve_book(book_id):
         """
@@ -235,7 +235,7 @@ def create_app(config_class=None):
             flash(f'Book "{book.title}" is already reserved')
         return redirect(url_for(current_page))
 
-    @app.route('/receive_book/<book_id>', methods=['GET', 'POST'])
+    @app.route('/receive_book/<int:book_id>', methods=['GET', 'POST'])
     @login_required
     def receive_book(book_id):
         """
@@ -246,21 +246,24 @@ def create_app(config_class=None):
         """
         book = db.get_or_404(Book, book_id)
         current_page = request.args.get('current_page', default='home')
-        if book:
+        if book and not book.lent_out:
             if book.book_lender == current_user or book.book_owner == current_user:
-                current_date = datetime.now()
+                current_date = datetime.now().date()
                 new_date = current_date + timedelta(days=28)
                 book.return_date = new_date
                 book.lent_out = True
                 db.session.commit()
-                logger.info(f'Lender received the book: "{book.title}"')
-                flash(f'Book "{book.title}" is handed over to lender')
+                logger.info(f'Lender id: {current_user.id} received the book id: "{book.id}"')
+                flash(f'Book "{book.title}" is handed over to lender.')
             else:
-                logger.info(f"Book doesn't exists.")
+                logger.info(f"User id: {current_user.id} tried to receive book id: {book_id} that doesn't exists.")
                 flash("You are not allowed to make these changes!")
+                return abort(401)
             return redirect(url_for(current_page, user=current_user))
+        else:
+            return abort(400)
 
-    @app.route('/cancel_reservation/<book_id>', methods=['GET', 'POST'])
+    @app.route('/cancel_reservation/<int:book_id>', methods=['GET', 'POST'])
     @login_required
     def cancel_reservation(book_id):
         """Validate that current user is book lender or book owner and cancel the reservation."""
@@ -273,7 +276,7 @@ def create_app(config_class=None):
         if book.owner_id == current_user.id or book.book_lender == current_user:
             if not book.reserved:
                 logger.warning(f"User id: {current_user.id} is trying to cancel the book id: {book.id}"
-                               f" while book is not reserved.")
+                               f" reservation while book is not reserved.")
                 return abort(404)
             book.reserved = False
             book.book_lender = None
