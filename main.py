@@ -109,10 +109,11 @@ def create_app(config_class=None):
 
         Show all the books in the database.
         """
-        logger.info("Went to Home Page")
-        result = db.session.execute(db.select(Book).where(Book.available_for_lending == True).order_by(Book.title))
+        logger.info(f"User id: {current_user.id} went to Home Page")
+        result = db.session.execute(db.select(Book).where(Book.available_for_lending == True))
         all_books = result.scalars().all()
-        return render_template("index.html", all_books=all_books, user=current_user)
+        sorted_books = list(sorted(all_books, key=lambda book: (book.author, book.title)))
+        return render_template("index.html", all_books=sorted_books, user=current_user)
 
     @app.route('/change_duration/<int:user_id>', methods=['POST'])
     @login_required
@@ -124,11 +125,12 @@ def create_app(config_class=None):
             logger.error(f'User id: {current_user.id} is trying to set invalid duration: {duration}')
             return redirect(url_for('my_books'))
         if current_user.id != user.id:
-            logger.warning("Unauthorized user is trying to change lending duration")
+            logger.warning(f"Unauthorized user (id: {current_user.id}) is trying to change lending duration for user "
+                           f"id: {user_id}")
             return abort(401)
         user.duration = int(duration)
         db.session.commit()
-        logger.info(f'User {user.username} changed lending duration to {user.duration}')
+        logger.info(f'User id {user.id} changed lending duration to {user.duration}')
         flash("You have successfully changed lending duration")
         return redirect(url_for('my_books'))
 
@@ -171,7 +173,7 @@ def create_app(config_class=None):
         due_books = [book for book in books if book.return_date is not None and book.return_date < datetime.now().date()]
 
         if not books:
-            logger.info("User has no books to show in My Books page")
+            logger.info(f"User id: {current_user.id} has no books to show in My Books page")
             flash("You haven't added any books yet")
         return render_template("my_books.html", user=current_user, books=books, due_books=due_books)
 
@@ -184,12 +186,11 @@ def create_app(config_class=None):
             if book.available_for_lending:
                 book.available_for_lending = False
                 message = f"Book {book.title} is set to unavailable for lending."
-                logger.info(message)
             else:
                 book.available_for_lending = True
                 message = f"Book {book.title} is set to available for lending."
-                logger.info(message)
             db.session.commit()
+            logger.info(f"(Book id: {book.id}){message}")
             return jsonify(success=True, message=message)
         else:
             logger.warning(f'Unauthorized user trying to (de)activate book {book.title}!')
@@ -222,16 +223,16 @@ def create_app(config_class=None):
             return abort(404)
         if book.owner_id == current_user.id:
             flash('You cannot reserve your own book!')
-            logger.debug("Book owner tries to reserve his own book!")
+            logger.debug(f"Book owner (user id: {current_user.id}) tries to reserve his own book!")
             return redirect(url_for(current_page))
         if not book.reserved:
             book.reserved = True
             book.lender_id = current_user.id
             db.session.commit()
-            logger.info(f'Book "{book.title}" has been reserved for user id: {book.lender_id}')
+            logger.info(f'Book id"{book.id}" has been reserved for user id: {book.lender_id}')
             flash(f'Book "{book.title}" is reserved for You')
         else:
-            logger.warning(f'Book "{book.title}" is already reserved for user id: {book.lender_id}')
+            logger.warning(f'Book id:{book.id} is already reserved for user id: {book.lender_id}')
             flash(f'Book "{book.title}" is already reserved')
         return redirect(url_for(current_page))
 
@@ -262,6 +263,7 @@ def create_app(config_class=None):
                 return abort(401)
             return redirect(url_for(current_page, user=current_user))
         else:
+            logger.warning(f"User id: {current_user.id} tried to receive book id: {book_id}. Book already received.")
             return abort(400)
 
     @app.route('/cancel_reservation/<int:book_id>', methods=['GET', 'POST'])
@@ -282,7 +284,7 @@ def create_app(config_class=None):
             book.reserved = False
             book.book_lender = None
             db.session.commit()
-            logger.info(f"Book {book.title} reservation has been cancelled by user id: {current_user.id}")
+            logger.info(f"Book id: {book.id} reservation has been cancelled successfully by user id: {current_user.id}")
             flash(f'Book "{book.title}" reservation is successfully cancelled')
         else:
             logger.warning(f"User id: {current_user.id} is trying to cancel the reservation of the book id: {book.id}")
@@ -302,7 +304,7 @@ def create_app(config_class=None):
     @app.route('/searchbar/', methods=['GET'])
     def searchbar():
         """
-        Return a list of books that books author or title contains a search term and redirect to searchbar result page.
+        Return a list of books that books author or title contains a search query and redirect to searchbar result page.
         """
         query = request.args.get('query')
         if query and len(query) > 0 and not query.isspace():
@@ -313,7 +315,7 @@ def create_app(config_class=None):
         else:
             query_books = []
             flash("Wrong input")
-        logger.info(f"Search query: {query}")
+        logger.info(f"User id: {current_user.id} search query: {query}")
         return render_template("searchbar.html", query_books=query_books, user=current_user, query=query)
 
     @app.route('/add_book', methods=['GET', 'POST'])
@@ -322,20 +324,20 @@ def create_app(config_class=None):
         """Create and add a new book to the lending environment. Validate and direct user to the book adding page."""
         form = NewBookForm()
         user = db.get_or_404(User, current_user.id)
-        logger.info("Went to add a new book page")
+        logger.info(f"User id: {current_user.id} went to add a new book page")
         if user and form.validate_on_submit():
             title = form.title.data
             author = form.author.data.title()
             image_url = form.image_url.data
             if not check_image_url(image_url):
                 flash("Image URL is not valid. Please try again.")
-                logger.error(f"Image URL: {image_url} is not valid")
+                logger.error(f"User id: {current_user.id} failed to add book cover Image URL: {image_url} is not valid")
                 return render_template('add_book.html', form=form, user=current_user)
             all_db_books = Book.query.all()
             existing_book = [book for book in all_db_books if title.lower() == book.title.lower() and author.lower() ==
                              book.author.lower()]
             if existing_book:
-                logger.warning(f"Book already exists: {title}")
+                logger.warning(f"User id: {current_user.id} failed to add book that already exists: {title}")
                 flash("A book with this title already exists.", "danger")
                 return redirect(url_for('add_book'))
             new_book = Book(title=title,
@@ -349,7 +351,8 @@ def create_app(config_class=None):
             db.session.add(new_book)
             db.session.commit()
             flash("Book added successfully")
-            logger.info(f"Created new book and added book into database: {new_book.title}")
+            logger.info(f"User id: {current_user.id} created new book and added book into database: {new_book.title}, "
+                        f"id: {new_book.id}")
             return redirect(url_for('home'))
         return render_template("add_book.html", form=form, user=current_user)
 
@@ -373,12 +376,14 @@ def create_app(config_class=None):
             )
             existing_mail = db.session.execute(db.select(User).where(User.email == email)).scalar()
             if existing_mail:
-                logger.warning("User with that email address already exists.")
+                logger.warning(f"User id: {current_user.id} failed to create new user. Email: {email} address already "
+                               f"exists.")
                 flash('This email address already exists. Try to login instead.')
                 return redirect(url_for('login'))
             existing_username = db.session.execute(db.select(User).where(User.username == username)).scalar()
             if existing_username:
-                logger.warning("Tried to register with username that already exists.")
+                logger.warning(f"User id: {current_user.id} failed to register with username: {username}. Username "
+                               f"already exists.")
                 flash('This username already exists.')
                 return render_template('register.html', form=form, user=current_user)
             new_user = User(first_name=first_name.title(),
@@ -391,7 +396,8 @@ def create_app(config_class=None):
             db.session.commit()
             login_user(new_user)
             flash('Your account has been created successfully.')
-            logger.info(f"Created new user: {new_user.first_name} {new_user.last_name}")
+            logger.info(f"Created new user:\nFirst name: {new_user.first_name}\nLast name: {new_user.last_name}"
+                        f"\nemail: {new_user.email}\nUsername: {new_user.username}")
             return redirect(url_for('home'))
         return render_template("register.html", form=form, user=current_user)
 
@@ -405,15 +411,15 @@ def create_app(config_class=None):
             user = db.session.execute(db.select(User).where(User.username == username)).scalar()
             if not user:
                 flash('Invalid Username. Please try again')
-                logger.debug("Inserted invalid Username")
+                logger.debug(f"Failed as inserted username: {username} that not exists.")
                 return redirect(url_for('login'))
             if not check_password_hash(user.password, password):
                 flash('Invalid password. Please try again')
-                logger.debug("Inserted wrong password")
+                logger.debug(f" User id: {current_user.id} and username: {username} failed as inserted wrong password")
                 return render_template('login.html', form=form, user=current_user)
             flash(f"Logged in successfully as {user.first_name}.")
             login_user(user, remember=form.remember_me.data)
-            logger.info(f"{username} logged in.")
+            logger.info(f"User id: {current_user.id} and username: {username} logged in.")
             return redirect(url_for('home'))
         return render_template("login.html", form=form, user=current_user)
 
@@ -425,7 +431,7 @@ def create_app(config_class=None):
         #     flash('You must be logged in to log out')
         #     return redirect(url_for('login'))
         logout_user()
-        logger.info("User logged out. Redirected to home page.")
+        logger.info(f"User id: {current_user.id} logged out.")
         flash("You have been logged out. Hopefully we'll see you soon.")
         return redirect(url_for('home'))
 
