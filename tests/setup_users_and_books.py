@@ -5,13 +5,13 @@ from config import TestConfig
 from main import db, create_app, User
 
 app = create_app(config_class=TestConfig)
+app.config["TESTING"] = True
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///test_book_lending.db'
+app.config['WTF_CSRF_ENABLED'] = False
 
 
 @pytest.fixture
 def client():
-    app.config["TESTING"] = True
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///test_book_lending.db'
-    app.config['WTF_CSRF_ENABLED'] = False
     with app.test_client() as client:
         with app.app_context():
             db.create_all()
