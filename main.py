@@ -329,17 +329,19 @@ def create_app(config_class=None):
     @login_required
     def remove_book(book_id):
         """Remove a book from the database. Validate that book is not lent out and user is the owner of the book."""
+        logger.info(f"User id: {current_user.id} entered remove_book with Book id: {book_id}")
         book = db.get_or_404(Book, book_id)
         current_page = request.args.get('current_page', default='home')
         if current_user.id != book.owner_id:
             logger.error(f"User id: {current_user.id} failed to remove book id: {book_id}. User is not the owner of "
                          f"the book")
             return abort(401)
-        if book.lent_out:
+        if book.lent_out or book.reserved:
             logger.error(f"User id: {current_user.id} is unable to remove book id: {book_id}. Book is lent out.")
             return abort(400)
         db.session.delete(book)
         db.session.commit()
+        flash(f"Book {book.title} has been removed successfully")
         logger.info(f"User id: {current_user.id} removed successfully his own book id: {book_id}.")
         return redirect(url_for(current_page))
 

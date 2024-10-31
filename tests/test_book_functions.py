@@ -1,5 +1,5 @@
 from main import db, User, Book
-from setup_users_and_books import client, first_user_with_books, second_user_with_books
+from setup_users_and_books import client, first_user_with_books, second_user_with_books, add_third_user
 from authorization import login, logout
 
 
@@ -144,3 +144,66 @@ def test_set_lending_duration_wrong_input(client, first_user_with_books, second_
     user = db.get_or_404(User, 1)
     assert user.duration == 28
     assert b"Invalid duration value" in response_wrong_input.data
+
+
+# REMOVE BOOK
+def test_remove_book(client, first_user_with_books):
+    login(client, 'juhanv')
+    user = db.get_or_404(User, 1)
+    response = client.get(f'/remove_book/1', follow_redirects=True)
+    assert response.status_code == 200
+    assert b"Book Rich Dad Poor Dad has been removed successfully"
+    books = db.session.execute(db.select(Book).where(Book.book_owner == user)).scalars().all()
+    assert len(books) == 1
+    for book in books:
+        assert book.title != 'Rich Dad Poor Dad'
+
+
+def test_remove_book_wrong_input(client, first_user_with_books):
+    login(client, 'juhanv')
+    user = db.get_or_404(User, 1)
+    response_a = client.get('/remove_book/a', follow_redirects=True)
+    assert response_a.status_code == 404
+    response_q = client.get('/remove_book/?', follow_redirects=True)
+    assert response_q.status_code == 404
+    response_negative = client.get('/remove_book/-5', follow_redirects=True)
+    assert response_negative.status_code == 404
+    books = db.session.execute(db.select(Book).where(Book.book_owner == user)).scalars().all()
+    assert len(books) == 2
+
+
+def test_remove_book_lent_out(client, first_user_with_books, add_third_user):
+    login(client, 'toomask')
+    client.get('/reserve_book/1', follow_redirects=True)
+    client.get('/receive_book/1', follow_redirects=True)
+    logout(client)
+    login(client, 'juhanv')
+    response = client.get('/remove_book/1', follow_redirects=True)
+    user = db.get_or_404(User, 1)
+    books = db.session.execute(db.select(Book).where(Book.book_owner == user)).scalars().all()
+    assert response.status_code == 400
+    assert len(books) == 2
+
+
+def test_remove_book_reserved(client, first_user_with_books, add_third_user):
+    login(client, 'toomask')
+    client.get('/reserve_book/1', follow_redirects=True)
+    logout(client)
+    login(client, 'juhanv')
+    response = client.get('/remove_book/1', follow_redirects=True)
+    user = db.get_or_404(User, 1)
+    books = db.session.execute(db.select(Book).where(Book.book_owner == user)).scalars().all()
+    assert response.status_code == 400
+    assert len(books) == 2
+
+
+def test_remove_book_not_authenticated_user(client, first_user_with_books):
+    logout(client)
+    response = client.get('/remove_book/1', follow_redirects=True)
+    assert response.status_code == 401
+
+
+def test_remove_book_unauthorized_user(client, first_user_with_books, add_third_user):
+    login(client, 'toomask')
+    response = client.get('/remove_book/1', first_user_with_books)
+    assert response.status_code == 401
