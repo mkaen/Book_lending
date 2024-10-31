@@ -31,7 +31,7 @@
                 {% endif %}
             {% endwith %}
     {% if books %}
-    <ol class="list-group list-group-numbered justify-content-center container mt-5 card" style="width: 50%">
+    <ol class="list-group list-group-numbered justify-content-center container my-5 card" style="width: 50%">
 
   {% for book in books %}
   <li class="list-group-item d-flex align-items-center" style="background-color: #ACBCFF">
@@ -54,12 +54,15 @@
 
         {% endif %}
         {% if not book.lent_out %}
-      <div class="form-check form-switch my-3 border-bottom">
-    <input class="form-check-input mb-3" type="checkbox" role="switch" id="flexSwitchCheckDefault"
+      <div class="form-check form-switch my-3">
+    <input class="form-check-input mb-1" type="checkbox" role="switch" id="flexSwitchCheckDefault"
            {% if book.available_for_lending %}checked{% endif %}
            onclick="toggleLending('{{ book.id }}')">
     <label class="form-check-label" for="flexSwitchCheckDefault">Activate for Lending</label>
   </div>
+        <div class="border-bottom mb-3">
+              <a class="badge text-bg-danger rounded-pill mb-3" href="{{ url_for('remove_book', book_id=book.id, current_page='my_books') }}">Remove Book</a>
+            </div>
         {% else %}
         <div class="border-bottom my-3"></div>
         {% endif %}

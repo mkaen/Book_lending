@@ -1,16 +1,17 @@
 from datetime import datetime, timedelta, date
+
+import requests
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, abort
 from flask_bootstrap import Bootstrap5
 from flask_login import login_required, LoginManager, current_user, login_user, logout_user, UserMixin
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import Integer, String, DateTime, Boolean, or_, Date
+from sqlalchemy import Integer, String, Boolean, or_, Date
 from sqlalchemy.orm import mapped_column, Mapped, DeclarativeBase, Relationship
 from werkzeug.security import generate_password_hash, check_password_hash
 from forms import LoginForm, RegistrationForm, NewBookForm
 from dotenv import load_dotenv
 import os
 import logging
-import requests
 
 load_dotenv()
 
@@ -48,7 +49,7 @@ class User(UserMixin, db.Model):
     email: Mapped[String] = mapped_column(String(250), nullable=False, unique=True)
     username: Mapped[String] = mapped_column(String(250), nullable=False, unique=True)
     password: Mapped[String] = mapped_column(String(250), nullable=False)
-    duration: Mapped[int] = mapped_column(Integer, nullable=False)
+    duration: Mapped[int] = mapped_column(Integer, nullable=False, default=28)
     my_books = Relationship('Book', foreign_keys='Book.owner_id', back_populates='book_owner')
     reserved_books = Relationship('Book', foreign_keys='Book.lender_id', back_populates='book_lender')
 
@@ -71,7 +72,7 @@ def create_app(config_class=None):
     app = Flask(__name__)
 
     logger = logging.getLogger(__name__)
-    handler = ""
+    handler = None
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
     if config_class:
@@ -169,9 +170,10 @@ def create_app(config_class=None):
     @login_required
     def my_books():
         """Filter your own added books and direct to my_books page."""
-        logger.info("Went to My Books page")
+        logger.info(f"User id: {current_user.id} to My Books page")
         books = db.session.execute(db.select(Book).where(Book.owner_id == current_user.id)).scalars().all()
-        due_books = [book for book in books if book.return_date is not None and book.return_date < datetime.now().date()]
+        due_books = [book for book in books if book.return_date is not None
+                     and book.return_date < datetime.now().date()]
 
         if not books:
             logger.info(f"User id: {current_user.id} has no books to show in My Books page")
@@ -322,6 +324,24 @@ def create_app(config_class=None):
         else:
             logger.info(f"Not authenticated user search query: {query}")
         return render_template("searchbar.html", query_books=query_books, user=current_user, query=query)
+
+    @app.route('/remove_book/<int:book_id>')
+    @login_required
+    def remove_book(book_id):
+        """Remove a book from the database. Validate that book is not lent out and user is the owner of the book."""
+        book = db.get_or_404(Book, book_id)
+        current_page = request.args.get('current_page', default='home')
+        if current_user.id != book.owner_id:
+            logger.error(f"User id: {current_user.id} failed to remove book id: {book_id}. User is not the owner of "
+                         f"the book")
+            return abort(401)
+        if book.lent_out:
+            logger.error(f"User id: {current_user.id} is unable to remove book id: {book_id}. Book is lent out.")
+            return abort(400)
+        db.session.delete(book)
+        db.session.commit()
+        logger.info(f"User id: {current_user.id} removed successfully his own book id: {book_id}.")
+        return redirect(url_for(current_page))
 
     @app.route('/add_book', methods=['GET', 'POST'])
     @login_required
