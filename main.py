@@ -70,7 +70,7 @@ def check_image_url(url):
 def create_app(config_class=None):
     """Create and configure Flask application."""
     app = Flask(__name__)
-
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     logger = logging.getLogger(__name__)
     handler = None
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -81,9 +81,8 @@ def create_app(config_class=None):
         logger.setLevel(logging.DEBUG)
     else:
         app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE
-        app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
         handler = logging.FileHandler("book_lending.log", mode="w")
+        logger.setLevel(logging.INFO)
 
     handler.setFormatter(formatter)
     logger.addHandler(handler)

@@ -5,8 +5,6 @@ from config import TestConfig
 from main import db, create_app, User, Book
 
 app = create_app(config_class=TestConfig)
-app.config["TESTING"] = True
-# app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///test_book_lending.db'
 app.config['WTF_CSRF_ENABLED'] = False
 
 
