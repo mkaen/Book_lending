@@ -169,7 +169,7 @@ def create_app(config_class=None):
     @login_required
     def my_books():
         """Filter your own added books and direct to my_books page."""
-        logger.info(f"User id: {current_user.id} to My Books page")
+        logger.info(f"User id: {current_user.id} entered to My Books page")
         books = db.session.execute(db.select(Book).where(Book.owner_id == current_user.id)).scalars().all()
         due_books = [book for book in books if book.return_date is not None
                      and book.return_date < datetime.now().date()]
