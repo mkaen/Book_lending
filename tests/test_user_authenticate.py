@@ -2,7 +2,7 @@ from flask_login import current_user
 from werkzeug.security import check_password_hash
 
 from main import db, User
-from setup_users_and_books import client, add_user
+from setup_users_and_books import client, first_user_with_books
 
 
 def test_register_new_user(client):
@@ -29,7 +29,7 @@ def test_register_new_user(client):
     assert user.password != '123456'
 
 
-def test_register_username_already_exists(client, add_user):
+def test_register_username_already_exists(client, first_user_with_books):
     response = client.post('/register', data={
         'first_name': 'John',
         'last_name': 'Wick',
@@ -48,7 +48,7 @@ def test_register_username_already_exists(client, add_user):
         assert '_user_id' not in session
 
 
-def test_register_email_already_exists(client, add_user):
+def test_register_email_already_exists(client, first_user_with_books):
     response = client.post('/register', data={
         'first_name': 'John',
         'last_name': 'Wick',
@@ -67,7 +67,7 @@ def test_register_email_already_exists(client, add_user):
         assert '_user_id' not in session
 
 
-def test_login_user(client, add_user):
+def test_login_user(client, first_user_with_books):
     response = client.post('/login', data={
         'username': 'juhanv',
         'password': '123456'
@@ -81,7 +81,7 @@ def test_login_user(client, add_user):
     assert response.request.path == '/'
 
 
-def test_invalid_username_login(client, add_user):
+def test_invalid_username_login(client, first_user_with_books):
     response = client.post('/login', data={
         'username': 'juhanvi',
         'password': '123456'
@@ -91,7 +91,7 @@ def test_invalid_username_login(client, add_user):
     assert response.request.path == '/login'
 
 
-def test_invalid_password_login(client, add_user):
+def test_invalid_password_login(client, first_user_with_books):
     response = client.post('/login', data={
         'username': 'juhanv',
         'password': '1234567'
@@ -101,7 +101,7 @@ def test_invalid_password_login(client, add_user):
     assert response.request.path == '/login'
 
 
-def test_logout_user(client, add_user):
+def test_logout_user(client, first_user_with_books):
     login_response = client.post('/login', data={
         'username': 'juhanv',
         'password': '123456'
