@@ -3,6 +3,7 @@ from werkzeug.security import generate_password_hash
 
 from config import TestConfig
 from main import db, create_app, User, Book
+from authorization import logout
 
 app = create_app(config_class=TestConfig)
 app.config['WTF_CSRF_ENABLED'] = False
@@ -14,6 +15,7 @@ def client():
         db.create_all()
         with app.test_client() as client:
             yield client
+            logout(client)
         db.drop_all()
 
 

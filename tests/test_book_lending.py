@@ -40,7 +40,6 @@ def test_reserve_book_already_reserved(client, first_user_with_books, second_use
 
 
 def test_reserve_book_user_not_authenticated(client, first_user_with_books):
-    logout(client)
     response = client.get('/reserve_book/1', follow_redirects=True)
     assert response.status_code == 401
 
@@ -91,7 +90,6 @@ def test_cancel_reservation_by_lender(client, first_user_with_books, add_third_u
 
 
 def test_cancel_reservation_by_not_authenticated_user(client, first_user_with_books):
-    logout(client)
     reservation_response = client.get('/cancel_reservation/1', follow_redirects=True)
     assert reservation_response.status_code == 401
 
@@ -229,7 +227,6 @@ def test_return_book_not_found(client, add_third_user):
 
 
 def test_return_book_user_not_authenticated(client, first_user_with_books):
-    logout(client)
     response = client.get('/return_book/1', follow_redirects=True)
     assert response.status_code == 401
 

@@ -54,10 +54,7 @@ def test_cannot_deactivate_book_while_book_is_lent_out(client, first_user_with_b
 
 
 def test_deactivate_book_while_user_is_anonymous(client, first_user_with_books):
-    logout(client)
     book = db.get_or_404(Book, 2)
-    # with client.session_transaction() as session:
-    #     print(f"\nUser id in session: {session.get('_user_id')}")
     assert book.available_for_lending is True
     response = client.get(f'/activate_to_borrow/2')
     book = db.get_or_404(Book, 2)
@@ -87,9 +84,6 @@ def test_set_lending_duration(client, first_user_with_books):
 
 
 def test_set_duration_user_anonymous(client, first_user_with_books):
-    logout(client)
-    # with client.session_transaction() as session:
-    #     print(f"\nUser id in session: {session.get('_user_id')}")
     user = db.get_or_404(User, 1)
     assert user.duration == 28
     response = client.post(f'/change_duration/{user.id}', data={'duration': 12}, follow_redirects=True)
@@ -198,7 +192,6 @@ def test_remove_book_reserved(client, first_user_with_books, add_third_user):
 
 
 def test_remove_book_not_authenticated_user(client, first_user_with_books):
-    logout(client)
     response = client.get('/remove_book/1', follow_redirects=True)
     assert response.status_code == 401
 
