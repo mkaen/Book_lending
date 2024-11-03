@@ -5,15 +5,15 @@ from flask_bootstrap import Bootstrap5
 from flask_login import login_required, LoginManager, current_user, login_user, logout_user
 from sqlalchemy import or_
 from werkzeug.security import generate_password_hash, check_password_hash
-from forms import LoginForm, RegistrationForm, NewBookForm
 from dotenv import load_dotenv
 import os
 import logging
 
+from forms import LoginForm, RegistrationForm, NewBookForm
 from models.database import db
 from models.user import User
 from models.book import Book
-from utilities.utilities import check_image_url
+from utilities.service import check_image_url
 
 load_dotenv()
 
