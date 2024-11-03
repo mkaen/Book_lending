@@ -1,7 +1,7 @@
 import pytest
 from werkzeug.security import generate_password_hash
 
-from config import TestConfig
+from configuration.config import TestConfig
 from main import db, create_app, User, Book
 from authentication import logout
 
