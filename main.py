@@ -156,6 +156,7 @@ def create_app(config_class=None):
     @login_required
     def my_reserved_books():
         """Find books that you have reserved and direct the user to the my_reserved_books page."""
+        logger.info(f"User id: {current_user.id} entered reserved books page.")
         books = db.session.execute(db.select(Book).where(Book.book_lender == current_user)
                                    .order_by(Book.id)).scalars().all()
         due_books = [book for book in books if book.return_date is not None and book.return_date < datetime.now()]
