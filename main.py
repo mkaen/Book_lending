@@ -23,10 +23,11 @@ SECRET_KEY = os.environ.get('SECRET_KEY')
 
 def create_app(config_class=None):
     """Create and configure Flask application."""
+
     app = Flask(__name__)
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     logger = logging.getLogger(__name__)
-    handler = logging.FileHandler("book_lending.log", mode="w")
+    handler = logging.FileHandler("book_lending.log")
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
     if config_class:
@@ -252,10 +253,11 @@ def create_app(config_class=None):
         """Return a list of available books that not reserved and direct to available books page."""
         books = (db.session.execute(db.select(Book).where(Book.reserved == False, Book.available_for_lending == True))
                  .scalars().all())
+        sorted_books = list(sorted(books, key=lambda book: (book.author, book.title)))
         logger.info(f"User went to page: Available books")
         if not books:
             logger.debug("There's no available books. Returning empty list")
-        return render_template("available_books.html", available_books=books, user=current_user)
+        return render_template("available_books.html", available_books=sorted_books, user=current_user)
 
     @app.route('/searchbar/', methods=['GET'])
     def searchbar():
