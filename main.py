@@ -1,70 +1,24 @@
 from datetime import datetime, timedelta, date
 
-import requests
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, abort
 from flask_bootstrap import Bootstrap5
 from flask_login import login_required, LoginManager, current_user, login_user, logout_user, UserMixin
-from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import Integer, String, Boolean, or_, Date
-from sqlalchemy.orm import mapped_column, Mapped, DeclarativeBase, Relationship
+from sqlalchemy import or_
 from werkzeug.security import generate_password_hash, check_password_hash
 from forms import LoginForm, RegistrationForm, NewBookForm
 from dotenv import load_dotenv
 import os
 import logging
 
+from models.database import db
+from models.user import User
+from models.book import Book
+from utilities.utilities import check_image_url
+
 load_dotenv()
 
-
-class Base(DeclarativeBase):
-    pass
-
-
-db = SQLAlchemy(model_class=Base)
 DATABASE = os.environ.get('DATABASE')
 SECRET_KEY = os.environ.get('SECRET_KEY')
-
-
-class Book(db.Model):
-    __tablename__ = 'books'
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    title: Mapped[String] = mapped_column(String(250), nullable=False, unique=True)
-    author: Mapped[String] = mapped_column(String(250), nullable=False)
-    image_url: Mapped[String] = mapped_column(String(250), nullable=False)
-    return_date: Mapped[date] = mapped_column(Date, nullable=True, default=None)
-    reserved: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-    lent_out: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-    available_for_lending: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
-    owner_id: Mapped[int] = mapped_column(Integer, db.ForeignKey("users.id"), nullable=False)
-    book_owner = Relationship('User', foreign_keys=[owner_id], back_populates='my_books')
-    lender_id: Mapped[int] = mapped_column(Integer, db.ForeignKey("users.id"), nullable=True)
-    book_lender = Relationship('User', foreign_keys=[lender_id], back_populates='reserved_books')
-
-
-class User(UserMixin, db.Model):
-    __tablename__ = 'users'
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    first_name: Mapped[String] = mapped_column(String(250), nullable=False)
-    last_name: Mapped[String] = mapped_column(String(250), nullable=False)
-    email: Mapped[String] = mapped_column(String(250), nullable=False, unique=True)
-    username: Mapped[String] = mapped_column(String(250), nullable=False, unique=True)
-    password: Mapped[String] = mapped_column(String(250), nullable=False)
-    duration: Mapped[int] = mapped_column(Integer, nullable=False, default=28)
-    my_books = Relationship('Book', foreign_keys='Book.owner_id', back_populates='book_owner')
-    reserved_books = Relationship('Book', foreign_keys='Book.lender_id', back_populates='book_lender')
-
-
-def check_image_url(url):
-    """Check image url and return True if it exists and image file is correct and undamaged."""
-    try:
-        response = requests.get(url)
-        if response.status_code == 200 and 'image' in response.headers['Content-Type']:
-            return True
-        else:
-            return False
-    except requests.exceptions.RequestException as e:
-        print(f"Error checking URL: {e}")
-        return False
 
 
 def create_app(config_class=None):
