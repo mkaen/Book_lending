@@ -1,8 +1,8 @@
-from datetime import datetime, timedelta, date
+from datetime import datetime, timedelta
 
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, abort
 from flask_bootstrap import Bootstrap5
-from flask_login import login_required, LoginManager, current_user, login_user, logout_user, UserMixin
+from flask_login import login_required, LoginManager, current_user, login_user, logout_user
 from sqlalchemy import or_
 from werkzeug.security import generate_password_hash, check_password_hash
 from forms import LoginForm, RegistrationForm, NewBookForm
