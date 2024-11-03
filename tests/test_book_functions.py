@@ -1,6 +1,6 @@
 from main import db, User, Book
 from setup_users_and_books import client, first_user_with_books, second_user_with_books, add_third_user
-from authorization import login, logout
+from authentication import login, logout
 
 
 # BOOK ACTIVATION

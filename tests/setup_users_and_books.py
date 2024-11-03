@@ -3,7 +3,7 @@ from werkzeug.security import generate_password_hash
 
 from config import TestConfig
 from main import db, create_app, User, Book
-from authorization import logout
+from authentication import logout
 
 app = create_app(config_class=TestConfig)
 app.config['WTF_CSRF_ENABLED'] = False

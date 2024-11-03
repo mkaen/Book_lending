@@ -5,7 +5,7 @@ from flask_login import current_user
 
 from main import db, Book, User
 from setup_users_and_books import client, first_user_with_books, second_user_with_books, add_third_user
-from authorization import login, logout
+from authentication import login, logout
 
 
 # RESERVATION

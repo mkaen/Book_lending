@@ -1,6 +1,6 @@
 from main import db, User, Book
 from setup_users_and_books import client, first_user_with_books, second_user_with_books
-from authorization import login
+from authentication import login
 
 
 def test_users_amount_in_temporary_db(client, first_user_with_books, second_user_with_books):
