@@ -72,7 +72,7 @@ def create_app(config_class=None):
     app = Flask(__name__)
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     logger = logging.getLogger(__name__)
-    handler = None
+    handler = logging.FileHandler("book_lending.log", mode="w")
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
     if config_class:
@@ -81,7 +81,6 @@ def create_app(config_class=None):
         logger.setLevel(logging.DEBUG)
     else:
         app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE
-        handler = logging.FileHandler("book_lending.log", mode="w")
         logger.setLevel(logging.INFO)
 
     handler.setFormatter(formatter)
@@ -414,8 +413,7 @@ def create_app(config_class=None):
                             last_name=last_name.title(),
                             email=email,
                             username=username,
-                            password=password,
-                            duration=28)
+                            password=password)
             db.session.add(new_user)
             db.session.commit()
             login_user(new_user)
